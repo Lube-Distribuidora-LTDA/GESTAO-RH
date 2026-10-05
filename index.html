@@ -7313,20 +7313,35 @@
             const mesSel = document.getElementById('heImportMes');
             if (!anoSel || !mesSel) return;
 
+            // A folha de uma competência só existe DEPOIS que ela fecha (dia 20). Listar do
+            // mês atual em diante deixava de fora justamente a que acabou de fechar — em
+            // 05/10 a competência de Setembro (21/08 a 20/09) é passado e não aparecia.
+            // Agora lista as 12 últimas competências até a atual, atravessando o ano.
             const now = new Date();
-            const anoAtual = now.getFullYear();
-            const mesAtual = now.getMonth() + 1;
-
-            anoSel.innerHTML = `<option value="${anoAtual}" selected>${anoAtual}</option>`;
-
             const preserved = mesSel.value;
             let opts = '<option value="">Selecione o mês...</option>';
-            for (let m = mesAtual; m <= 12; m++) {
-                const competencia = `${anoAtual}-${String(m).padStart(2, '0')}`;
-                opts += `<option value="${m}">${escapeHtml(formatCompetenciaLabelLongo(competencia, interjornadaDiaCorte))}</option>`;
+            const competencias = [];
+            for (let i = 11; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                competencias.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
             }
+            // Mais recente primeiro: a que se importa quase sempre é a que acabou de fechar.
+            competencias.reverse().forEach(c => {
+                opts += `<option value="${c}">${escapeHtml(formatCompetenciaLabelLongo(c, interjornadaDiaCorte))}</option>`;
+            });
             mesSel.innerHTML = opts;
             if ([...mesSel.options].some(o => o.value === preserved)) mesSel.value = preserved;
+            atualizarAnoDaImportacaoHE();
+        }
+
+        // O select de ano é só leitura: o ano vem da competência escolhida, porque a lista
+        // atravessa a virada do ano (em janeiro se importa a competência de dezembro).
+        function atualizarAnoDaImportacaoHE() {
+            const anoSel = document.getElementById('heImportAno');
+            const comp = document.getElementById('heImportMes').value;
+            if (!anoSel) return;
+            const ano = comp ? comp.split('-')[0] : String(new Date().getFullYear());
+            anoSel.innerHTML = `<option value="${ano}" selected>${ano}</option>`;
         }
 
         // --- Import: exige selecionar o mês/ano antes de liberar o botão de importar ---
@@ -7334,6 +7349,7 @@
             const mes = document.getElementById('heImportMes').value;
             const btn = document.getElementById('btnHoraExtraImport');
             if (btn) btn.disabled = !mes;
+            atualizarAnoDaImportacaoHE();
         }
 
         function triggerHoraExtraImport() {
@@ -7364,9 +7380,12 @@
             const file = event.target.files[0];
             if (!file) return;
 
-            const mes = parseInt(document.getElementById('heImportMes').value, 10);
-            const ano = parseInt(document.getElementById('heImportAno').value, 10);
-            if (!mes) { showToast('Selecione o Mês', 'Escolha o mês da planilha antes de importar.', true); return; }
+            // O valor do select e a competência inteira ("2026-09"), para o ano não ficar
+            // ambíguo quando a lista atravessa a virada do ano.
+            const competenciaSel = document.getElementById('heImportMes').value;
+            if (!competenciaSel) { showToast('Selecione o Mês', 'Escolha o mês da planilha antes de importar.', true); return; }
+            const ano = parseInt(competenciaSel.split('-')[0], 10);
+            const mes = parseInt(competenciaSel.split('-')[1], 10);
 
             const reader = new FileReader();
             reader.onload = async function(e) {
