@@ -7313,22 +7313,18 @@
             const mesSel = document.getElementById('heImportMes');
             if (!anoSel || !mesSel) return;
 
-            // A folha de uma competência só existe DEPOIS que ela fecha (dia 20). Listar do
-            // mês atual em diante deixava de fora justamente a que acabou de fechar — em
-            // 05/10 a competência de Setembro (21/08 a 20/09) é passado e não aparecia.
-            // Agora lista as 12 últimas competências até a atual, atravessando o ano.
+            // Lista fixa de Setembro a Dezembro do ano corrente, a pedido do RH: são as
+            // únicas competências que eles importam hoje, e a lista curta evita escolher
+            // o mês errado. ATENÇÃO: em janeiro isso passa a mostrar Set-Dez do ano novo,
+            // que ainda não fecharam — na virada do ano a faixa precisa ser revista aqui.
             const now = new Date();
+            const anoAtual = now.getFullYear();
             const preserved = mesSel.value;
             let opts = '<option value="">Selecione o mês...</option>';
-            const competencias = [];
-            for (let i = 11; i >= 0; i--) {
-                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                competencias.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-            }
-            // Mais recente primeiro: a que se importa quase sempre é a que acabou de fechar.
-            competencias.reverse().forEach(c => {
+            for (let m = 9; m <= 12; m++) {
+                const c = `${anoAtual}-${String(m).padStart(2, '0')}`;
                 opts += `<option value="${c}">${escapeHtml(formatCompetenciaLabelLongo(c, interjornadaDiaCorte))}</option>`;
-            });
+            }
             mesSel.innerHTML = opts;
             if ([...mesSel.options].some(o => o.value === preserved)) mesSel.value = preserved;
             atualizarAnoDaImportacaoHE();
