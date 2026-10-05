@@ -9158,6 +9158,20 @@
             if (input) { input.value = ''; input.click(); }
         }
 
+        // O PontoMais exporta vários relatórios com a mesma cara de planilha, e só o
+        // "Relatório de Jornada" serve aqui — é o único que traz TODOS os dias do
+        // período. O de Horas Extras, por exemplo, lista só os dias que tiveram extra:
+        // medir descanso entre jornadas com dias faltando daria um intervalo que não
+        // existiu (21/08 19:11 direto para 25/08 07:05) com cara de resultado válido.
+        // Devolve o nome do relatório quando NÃO é o de jornada, para o aviso dizer o
+        // que veio em vez de só dizer que não deu.
+        function identificarRelatorioPontoMais(rows) {
+            const titulo = String((rows[0] && rows[0][0]) || '').trim();
+            if (!titulo || /relat[óo]rio\s+de\s+jornada/i.test(titulo)) return null;
+            const m = titulo.match(/relat[óo]rio\s+de\s+(.+?)\s+por\s/i);
+            return m ? m[1].trim() : titulo.slice(0, 60);
+        }
+
         // Faz o parse do relatório de ponto (formato PontoMais): um bloco por colaborador,
         // com uma linha "Colaborador" + cabeçalho de colunas + uma linha por dia do período,
         // encerrando com uma linha "TOTAIS" antes do próximo colaborador.
@@ -9234,7 +9248,10 @@
                     }
 
                     if (parsedRows.length === 0) {
-                        showToast('Erro na Importação', 'Nenhum registro de ponto válido encontrado na planilha. Verifique se o arquivo é o relatório de jornada exportado do PontoMais.', true);
+                        const outroRelatorio = identificarRelatorioPontoMais(rows);
+                        showToast('Erro na Importação', outroRelatorio
+                            ? `Esta planilha é o "Relatório de ${outroRelatorio}" do PontoMais. O InterJornadas precisa do "Relatório de Jornada": só ele traz todos os dias do período. Os outros listam apenas os dias com ocorrência, e o descanso entre jornadas sairia medido por cima dos dias que faltam.`
+                            : 'Nenhum registro de ponto válido encontrado na planilha. Verifique se o arquivo é o relatório de jornada exportado do PontoMais.', true);
                         return;
                     }
 
