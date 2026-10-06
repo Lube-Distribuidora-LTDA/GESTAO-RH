@@ -38,6 +38,22 @@ Sistema executivo de Business Intelligence e Gestão Estratégica de Absenteísm
 
 ---
 
+## 🔒 Acesso
+
+O sistema é protegido pela **Sentinela Lube**: só entra quem tem login no **Painel Lube** com permissão
+para o RH Absenteísmo (slug `rh-absenteismo`). Quem não tem é levado para a tela de login do portal
+(`https://painel-lube-distribuidora.vercel.app`); as rotas `/api/*` respondem 401.
+
+- O guarda mora em `middleware.ts` + `sentinela-guarda.ts`, na raiz do repositório (Routing Middleware
+  da Vercel, runtime nodejs). Não edite o `sentinela-guarda.ts` aqui: a cópia canônica fica no
+  repositório do portal (`guarda/`).
+- A exigência de login é ligada e desligada no painel da Sentinela (Configuração › exige login). Se a
+  central não responder, o guarda continua fechado: só passa quem tem sessão válida do Painel Lube.
+- Saúde do guarda: `https://rh-absentismo.vercel.app/.sentinela/saude`.
+- O guarda protege o site e as rotas `/api/*`, não o acesso direto ao banco do Supabase.
+
+---
+
 ## 🚀 Deploy no Vercel
 
 1. Conecte sua conta do **Vercel** ao repositório GitHub `RH-absenteismo`.
