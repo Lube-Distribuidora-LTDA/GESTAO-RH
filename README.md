@@ -49,6 +49,8 @@ para o RH Absenteísmo (slug `rh-absenteismo`). Quem não tem é levado para a t
   repositório do portal (`guarda/`).
 - A exigência de login é ligada e desligada no painel da Sentinela (Configuração › exige login). Se a
   central não responder, o guarda continua fechado: só passa quem tem sessão válida do Painel Lube.
+- Desde 2026-10-06 o "exige login" está **ligado** (`exige_login = true` em `sentinela.sistemas`),
+  sem rotas públicas: sem sessão, a página vai para o portal (`/?abrir=rh-absenteismo`).
 - Saúde do guarda: `https://rh-absentismo.vercel.app/.sentinela/saude`.
 - O guarda protege o site e as rotas `/api/*`, não o acesso direto ao banco do Supabase.
 
