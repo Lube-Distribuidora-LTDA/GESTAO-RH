@@ -7,7 +7,9 @@ import { sentinela } from './sentinela-guarda';
 
 // Deixa de fora só imagem, fonte e CSS; JS/JSON passam porque em alguns sistemas são os dados.
 // Runtime padrão da Vercel (nodejs). Para edge: acrescente runtime: 'edge'.
+// Neste projeto (package.json + buildCommand) o padrão do build saiu "edge" (deprecado): nodejs explícito.
 export const config = {
+  runtime: 'nodejs',
   matcher: ['/((?!.*\\.(?:css|png|jpe?g|gif|svg|ico|webp|avif|woff2?|ttf|otf|eot|map)$).*)'],
 };
 
