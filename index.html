@@ -7589,25 +7589,81 @@
             }).join('');
         }
 
+        // O painel abre "solto" na página (vai para o <body>, position: fixed), ancorado
+        // no botão. Dentro do card ele era cortado pela borda (overflow do card), e o
+        // RH via só a primeira linha da lista. Ao fechar, volta para o lugar de origem.
+        function fecharPaineisMulti() {
+            document.querySelectorAll('[data-painel-multi]').forEach(p => {
+                p.classList.add('hidden');
+                if (p._casa && p.parentElement !== p._casa) p._casa.appendChild(p);
+            });
+        }
+
+        function posicionarPainelMulti(id) {
+            const painel = document.getElementById(`${id}-painel`);
+            const casa = document.querySelector(`[data-filtro-multi="${id}"]`);
+            const botao = casa && casa.querySelector(':scope > button');
+            if (!painel || !botao || painel.classList.contains('hidden')) return;
+            const r = botao.getBoundingClientRect();
+            const margem = 8;
+            const largura = Math.min(Math.max(r.width, 260), window.innerWidth - margem * 2);
+            const esquerda = Math.max(margem, Math.min(r.left, window.innerWidth - largura - margem));
+            painel.style.width = largura + 'px';
+            painel.style.left = esquerda + 'px';
+
+            // Cabe embaixo? Senão abre para cima; a lista encolhe para caber na tela.
+            const lista = document.getElementById(`${id}-lista`);
+            if (lista) lista.style.maxHeight = '256px';
+            const abaixo = window.innerHeight - r.bottom - margem;
+            const acima = r.top - margem;
+            const paraCima = painel.offsetHeight > abaixo && acima > abaixo;
+            const espaco = paraCima ? acima : abaixo;
+            if (lista && painel.offsetHeight > espaco) {
+                const resto = painel.offsetHeight - lista.offsetHeight;
+                lista.style.maxHeight = Math.max(96, espaco - resto - 4) + 'px';
+            }
+            painel.style.top = (paraCima ? Math.max(margem, r.top - 4 - painel.offsetHeight) : r.bottom + 4) + 'px';
+        }
+
         function alternarPainelMulti(id) {
             const painel = document.getElementById(`${id}-painel`);
             if (!painel) return;
             const abrindo = painel.classList.contains('hidden');
             // Só um painel aberto por vez, senão eles se cobrem.
-            document.querySelectorAll('[data-painel-multi]').forEach(p => p.classList.add('hidden'));
+            fecharPaineisMulti();
             if (abrindo) {
+                if (!painel._casa) painel._casa = painel.parentElement;
+                document.body.appendChild(painel);
                 painel.classList.remove('hidden');
                 renderFiltroMulti(id);
+                posicionarPainelMulti(id);
                 const busca = document.getElementById(`${id}-busca`);
-                if (busca) { busca.value = ''; busca.focus(); }
+                if (busca) { busca.value = ''; busca.focus({ preventScroll: true }); }
             }
         }
 
-        // Clique fora fecha o painel aberto.
+        function painelMultiAberto() {
+            const p = [...document.querySelectorAll('[data-painel-multi]')].find(x => !x.classList.contains('hidden'));
+            return p ? p.id.replace(/-painel$/, '') : null;
+        }
+
+        // Clique fora fecha o painel aberto. Usa o caminho do evento, e não ev.target.closest():
+        // clicar numa opção redesenha a lista, o botão clicado sai da página e o closest()
+        // deixaria de achar o painel — fechando-o a cada clique.
         document.addEventListener('click', (ev) => {
-            if (ev.target.closest('[data-filtro-multi]')) return;
-            document.querySelectorAll('[data-painel-multi]').forEach(p => p.classList.add('hidden'));
+            const dentro = ev.composedPath().some(el => el && el.hasAttribute &&
+                (el.hasAttribute('data-filtro-multi') || el.hasAttribute('data-painel-multi')));
+            if (!dentro) fecharPaineisMulti();
         });
+        document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') fecharPaineisMulti(); });
+        // Rolar a página ou mudar o tamanho da janela: o painel acompanha o botão.
+        window.addEventListener('scroll', (ev) => {
+            const id = painelMultiAberto();
+            if (!id) return;
+            if (ev.target && ev.target.closest && ev.target.closest('[data-painel-multi]')) return;
+            posicionarPainelMulti(id);
+        }, true);
+        window.addEventListener('resize', () => { const id = painelMultiAberto(); if (id) posicionarPainelMulti(id); });
 
         // Monta o HTML de um filtro múltiplo. Usado direto no markup das seções.
         function htmlFiltroMulti(id, rotulo, rotuloTodos, comBusca = false) {
@@ -7622,7 +7678,7 @@
                         <span id="${id}-resumo" class="truncate">${escapeHtml(rotuloTodos)}</span>
                         <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-500 shrink-0"></i>
                     </button>
-                    <div id="${id}-painel" data-painel-multi class="hidden absolute z-40 mt-1 w-full min-w-[240px] bg-[#0b152b] border border-cyan-500/30 rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.7)] overflow-hidden">
+                    <div id="${id}-painel" data-painel-multi style="position:fixed;z-index:9999" class="hidden bg-[#0b152b] border border-cyan-500/30 rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.7)] overflow-hidden">
                         ${comBusca ? `<div class="p-2 border-b border-slate-800">
                             <input type="text" id="${id}-busca" oninput="renderFiltroMulti('${id}')" placeholder="Buscar..."
                                 class="w-full bg-[#070d1e] border border-slate-700 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-100 focus:border-cyan-400 focus:outline-none">
