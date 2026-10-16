@@ -3783,6 +3783,7 @@
             }
             atualizarAvisoEmpresasPendentes();
 
+
             // Motivos
             const motivoSelect = document.getElementById('filterMotivo');
             if (motivoSelect) {
@@ -3821,7 +3822,20 @@
                     funcaoSelect.appendChild(opt);
                 });
             }
-        }
+
+            // Ativa a múltipla escolha DEPOIS de preencher todos os selects: o controle
+            // espelha as opções, então se rodar antes ele nasce vazio e o filtro não pega.
+            ['filterEmpresa', 'filterMonth', 'filterTipo', 'filterMotivo', 'filterSetor', 'filterFuncao', 'filterDiaSemana']
+                .forEach(id => ativarMultiNoSelect(id, {
+                    filterEmpresa: 'Todas as Empresas',
+                    filterMonth: 'Todos os Meses',
+                    filterTipo: 'Todos os Tipos',
+                    filterMotivo: 'Todos os Motivos',
+                    filterSetor: 'Todos os Setores',
+                    filterFuncao: 'Todas as Funções',
+                    filterDiaSemana: 'Todos os Dias'
+                }[id], applyFilters, ['filterMotivo', 'filterSetor', 'filterFuncao'].includes(id)));
+}
 
         // Apply All Cascading Filters
         function applyFilters() {
@@ -3835,13 +3849,13 @@
             const searchVal = (document.getElementById('filterSearch').value || '').trim().toLowerCase();
 
             filteredData = rawData.filter(item => {
-                if (monthVal !== 'ALL' && item.ano_mes_sort !== monthVal) return false;
-                if (tipoVal !== 'ALL' && item.tipo_absenteismo !== tipoVal) return false;
-                if (motivoVal !== 'ALL' && item.motivo !== motivoVal) return false;
-                if (setorVal !== 'ALL' && item.setor !== setorVal) return false;
-                if (empresaVal !== 'ALL' && item.empresa_resolvida !== empresaVal) return false;
-                if (funcaoVal !== 'ALL' && item.funcao !== funcaoVal) return false;
-                if (diaSemanaVal !== 'ALL' && normalizeDiaSemana(item.dia_semana) !== normalizeDiaSemana(diaSemanaVal)) return false;
+                if (!multiDoSelect('filterMonth', item.ano_mes_sort)) return false;
+                if (!multiDoSelect('filterTipo', item.tipo_absenteismo)) return false;
+                if (!multiDoSelect('filterMotivo', item.motivo)) return false;
+                if (!multiDoSelect('filterSetor', item.setor)) return false;
+                if (!multiDoSelect('filterEmpresa', item.empresa_resolvida)) return false;
+                if (!multiDoSelect('filterFuncao', item.funcao)) return false;
+                if (!multiAceitaDiaSemana(item.dia_semana)) return false;
                 if (searchVal) {
                     const matchFunc = (item.funcionario || '').toLowerCase().includes(searchVal);
                     const matchRole = (item.funcao || '').toLowerCase().includes(searchVal);
@@ -3888,30 +3902,21 @@
                 }
             }
 
-            // Reset dropdowns
-            document.getElementById('filterMonth').value = 'ALL';
-            if (document.getElementById('filterEmpresa')) document.getElementById('filterEmpresa').value = 'ALL';
-            document.getElementById('filterTipo').value = 'ALL';
-            document.getElementById('filterMotivo').value = 'ALL';
-            document.getElementById('filterSetor').value = 'ALL';
-            document.getElementById('filterFuncao').value = 'ALL';
-            document.getElementById('filterDiaSemana').value = 'ALL';
+            // Os atalhos zeram tudo e marcam só o que o atalho quer, usando os filtros
+            // múltiplos — a partir dali o usuário pode somar ou tirar no clique.
+            limparMultisDeSelects(['filterMonth', 'filterEmpresa', 'filterTipo', 'filterMotivo', 'filterSetor', 'filterFuncao', 'filterDiaSemana']);
             document.getElementById('filterSearch').value = '';
 
             if (presetType === 'injustificado') {
-                document.getElementById('filterTipo').value = 'Injustificado';
+                alternarFiltroMulti('filterTipoMulti', 'Injustificado');
             } else if (presetType === 'segundas') {
-                document.getElementById('filterDiaSemana').value = 'Segunda-feira';
+                alternarFiltroMulti('filterDiaSemanaMulti', 'Segunda-feira');
             } else if (presetType === 'entrega') {
-                const setorSelect = document.getElementById('filterSetor');
-                for (let opt of setorSelect.options) {
-                    if (opt.value.toUpperCase().includes('ENTREGA')) {
-                        setorSelect.value = opt.value;
-                        break;
-                    }
-                }
+                const opcaoEntrega = (multiConfig['filterSetorMulti']?.opcoes || [])
+                    .find(o => String(o.valor).toUpperCase().includes('ENTREGA'));
+                if (opcaoEntrega) alternarFiltroMulti('filterSetorMulti', opcaoEntrega.valor);
             } else if (presetType === 'justificado') {
-                document.getElementById('filterTipo').value = 'Justificado';
+                alternarFiltroMulti('filterTipoMulti', 'Justificado');
             }
 
             applyFilters();
@@ -3927,13 +3932,7 @@
                 allBtn.className = 'preset-btn px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap bg-lube-navy dark:bg-blue-600 text-white shadow-md cursor-pointer';
             }
 
-            document.getElementById('filterMonth').value = 'ALL';
-            if (document.getElementById('filterEmpresa')) document.getElementById('filterEmpresa').value = 'ALL';
-            document.getElementById('filterTipo').value = 'ALL';
-            document.getElementById('filterMotivo').value = 'ALL';
-            document.getElementById('filterSetor').value = 'ALL';
-            document.getElementById('filterFuncao').value = 'ALL';
-            document.getElementById('filterDiaSemana').value = 'ALL';
+            limparMultisDeSelects(['filterMonth', 'filterEmpresa', 'filterTipo', 'filterMotivo', 'filterSetor', 'filterFuncao', 'filterDiaSemana']);
             document.getElementById('filterSearch').value = '';
             applyFilters();
         }
@@ -6485,6 +6484,9 @@
             const cur = empresaSel.value;
             empresaSel.innerHTML = '<option value="ALL">Todas as Empresas</option>' + empresas.map(e => `<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join('');
             if (empresas.includes(cur)) empresaSel.value = cur;
+
+            ativarMultiNoSelect('headFilterEmpresa', 'Todas as Empresas', applyHeadFilters);
+            ativarMultiNoSelect('headFilterSituacao', 'Todas as Situações', applyHeadFilters);
         }
 
         function applyHeadFilters() {
@@ -6492,8 +6494,8 @@
             const situacao = document.getElementById('headFilterSituacao').value;
 
             headFilteredData = headRawData.filter(r => {
-                if (empresa !== 'ALL' && r.empresa !== empresa) return false;
-                if (situacao !== 'ALL' && r.situacao !== situacao) return false;
+                if (!multiDoSelect('headFilterEmpresa', r.empresa)) return false;
+                if (!multiDoSelect('headFilterSituacao', r.situacao)) return false;
                 return true;
             });
 
@@ -6968,6 +6970,11 @@
             const curFunc = funcSel.value;
             funcSel.innerHTML = '<option value="ALL">Todas as Funções</option>' + funcs.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
             if (funcs.includes(curFunc)) funcSel.value = curFunc;
+
+            ativarMultiNoSelect('heFilterMes', 'Todos os Meses', applyHoraExtraFilters, true);
+            ativarMultiNoSelect('heFilterEmpresa', 'Todas as Empresas', applyHoraExtraFilters);
+            ativarMultiNoSelect('heFilterFuncao', 'Todas as Funções', applyHoraExtraFilters, true);
+            ativarMultiNoSelect('heFilterPercentual', '50% e 100%', applyHoraExtraFilters);
         }
 
         function applyHoraExtraFilters() {
@@ -6978,10 +6985,10 @@
             const search = document.getElementById('heFilterSearch').value.trim().toLowerCase();
 
             horaExtraFilteredData = horaExtraRawData.filter(r => {
-                if (mes !== 'ALL' && r.ano_mes_sort !== mes) return false;
-                if (dep !== 'ALL' && empresaDoColaborador(r.funcionario_nome) !== dep) return false;
-                if (funcao !== 'ALL' && normalizeFuncao(r.funcao) !== funcao) return false;
-                if (pct !== 'ALL' && String(r.percentual) !== pct) return false;
+                if (!multiDoSelect('heFilterMes', r.ano_mes_sort)) return false;
+                if (!multiDoSelect('heFilterEmpresa', empresaDoColaborador(r.funcionario_nome))) return false;
+                if (!multiDoSelect('heFilterFuncao', normalizeFuncao(r.funcao))) return false;
+                if (!multiDoSelect('heFilterPercentual', String(r.percentual))) return false;
                 if (search && !String(r.funcionario_nome || '').toLowerCase().includes(search)) return false;
                 return true;
             });
@@ -6993,6 +7000,7 @@
         }
 
         function resetHoraExtraFilters() {
+            limparMultisDeSelects(['heFilterMes', 'heFilterEmpresa', 'heFilterFuncao', 'heFilterPercentual']);
             document.getElementById('heFilterMes').value = 'ALL';
             document.getElementById('heFilterEmpresa').value = 'ALL';
             document.getElementById('heFilterFuncao').value = 'ALL';
@@ -7605,10 +7613,10 @@
         function htmlFiltroMulti(id, rotulo, rotuloTodos, comBusca = false) {
             return `
                 <div class="space-y-1.5 relative" data-filtro-multi="${id}">
-                    <label class="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase">
+                    ${rotulo ? `<label class="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase">
                         ${escapeHtml(rotulo)}
                         <span id="${id}-marca" class="hidden w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-                    </label>
+                    </label>` : `<span id="${id}-marca" class="hidden"></span>`}
                     <button type="button" onclick="alternarPainelMulti('${id}')"
                         class="w-full flex items-center justify-between gap-2 bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 hover:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400 focus:outline-none transition shadow-inner cursor-pointer">
                         <span id="${id}-resumo" class="truncate">${escapeHtml(rotuloTodos)}</span>
@@ -7626,6 +7634,42 @@
                         </div>
                     </div>
                 </div>`;
+        }
+
+        // Converte um <select> existente em filtro de múltipla escolha, SEM mexer em quem
+        // preenche o select: ele continua no DOM, escondido, e o controle múltiplo espelha
+        // as opções dele. Assim cada painel manteve o seu populate* como estava.
+        function ativarMultiNoSelect(selectId, rotuloTodos, aoMudar, comBusca = false) {
+            const sel = document.getElementById(selectId);
+            if (!sel) return;
+            const multiId = selectId + 'Multi';
+
+            if (!sel.dataset.multiAtivo) {
+                sel.classList.add('hidden');
+                const suporte = document.createElement('div');
+                suporte.innerHTML = htmlFiltroMulti(multiId, '', rotuloTodos, comBusca);
+                sel.parentElement.appendChild(suporte.firstElementChild);
+                sel.dataset.multiAtivo = '1';
+                safeCreateIcons();
+            }
+
+            // "ALL" era o jeito antigo de dizer "todos"; aqui isso vira conjunto vazio.
+            const opcoes = [...sel.querySelectorAll('option')]
+                .filter(o => o.value && o.value !== 'ALL')
+                .map(o => {
+                    const grupo = o.parentElement && o.parentElement.tagName === 'OPTGROUP' ? o.parentElement.label : '';
+                    return { valor: o.value, rotulo: grupo ? `${grupo.split(' (')[0]} · ${o.textContent}` : o.textContent };
+                });
+            registrarFiltroMulti(multiId, opcoes, rotuloTodos, aoMudar);
+        }
+
+        // Atalho de leitura: o id do filtro múltiplo derivado de um select.
+        function multiDoSelect(selectId, valor) {
+            return multiAceita(selectId + 'Multi', valor);
+        }
+
+        function limparMultisDeSelects(ids) {
+            ids.forEach(id => limparFiltroMulti(id + 'Multi', false));
         }
 
         // Descreve os filtros ativos em texto, para o cabeçalho do Excel.
@@ -8163,6 +8207,11 @@
             deptoSel.innerHTML = '<option value="ALL">Todos os Departamentos</option>' +
                 deptos.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
             if (deptos.includes(curDep)) deptoSel.value = curDep;
+
+            ativarMultiNoSelect('exFilterSituacao', 'Todas as Situações', applyExamesFilters);
+            ativarMultiNoSelect('exFilterMesVencimento', 'Todos os Meses', applyExamesFilters, true);
+            ativarMultiNoSelect('exFilterEmpresa', 'Todas as Empresas', applyExamesFilters);
+            ativarMultiNoSelect('exFilterDepartamento', 'Todos os Departamentos', applyExamesFilters, true);
         }
 
         function applyExamesFilters() {
@@ -8173,18 +8222,24 @@
             const mesVenc = document.getElementById('exFilterMesVencimento')?.value || 'ALL';
 
             examesFilteredData = examesRawData.filter(r => {
-                if (empresa !== 'ALL' && r.empresa !== empresa) return false;
-                if (depto !== 'ALL' && r.departamento !== depto) return false;
-                if (mesVenc !== 'ALL') {
+                if (!multiDoSelect('exFilterEmpresa', r.empresa)) return false;
+                if (!multiDoSelect('exFilterDepartamento', r.departamento)) return false;
+
+                const mesesSel = multiSelecionados('exFilterMesVencimentoMulti');
+                if (mesesSel.length > 0) {
                     const d = parseIsoDate(r.proximo_aso_iso);
                     if (!d) return false;
                     const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                    if (chave !== mesVenc) return false;
+                    if (!mesesSel.includes(chave)) return false;
                 }
-                if (situacao === 'A_VENCER') {
-                    if (r.situacao_chave !== 'VENCE_30' && r.situacao_chave !== 'VENCE_90') return false;
-                } else if (situacao !== 'ALL' && r.situacao_chave !== situacao) {
-                    return false;
+
+                // "A vencer" cobre duas chaves de situação, por isso não entra no multiAceita direto.
+                const sitSel = multiSelecionados('exFilterSituacaoMulti');
+                if (sitSel.length > 0) {
+                    const casa = sitSel.some(v => v === 'A_VENCER'
+                        ? (r.situacao_chave === 'VENCE_30' || r.situacao_chave === 'VENCE_90')
+                        : v === r.situacao_chave);
+                    if (!casa) return false;
                 }
                 if (busca) {
                     const alvo = `${r.funcionario} ${r.funcao} ${r.departamento}`.toUpperCase();
@@ -8199,9 +8254,20 @@
             safeCreateIcons();
         }
 
+        // O dia da semana é comparado normalizado ("Seg", "segunda-feira" e "Segunda-feira"
+        // são o mesmo dia), então não dá para usar a comparação direta do multiAceita.
+        function multiAceitaDiaSemana(dia) {
+            const sel = multiSelecionados('filterDiaSemanaMulti');
+            if (sel.length === 0) return true;
+            const alvo = normalizeDiaSemana(dia);
+            return sel.some(v => normalizeDiaSemana(v) === alvo);
+        }
+
         function atalhoExames(chave) {
             document.getElementById('exFilterSearch').value = '';
-            if (document.getElementById('exFilterMesVencimento')) document.getElementById('exFilterMesVencimento').value = 'ALL';
+            limparMultisDeSelects(['exFilterSituacao', 'exFilterMesVencimento', 'exFilterEmpresa', 'exFilterDepartamento']);
+            alternarFiltroMulti('exFilterSituacaoMulti', chave);
+            return;
             document.getElementById('exFilterEmpresa').value = 'ALL';
             document.getElementById('exFilterDepartamento').value = 'ALL';
             document.getElementById('exFilterSituacao').value = chave;
@@ -8210,6 +8276,7 @@
 
         function resetExamesFilters() {
             document.getElementById('exFilterSearch').value = '';
+            limparMultisDeSelects(['exFilterSituacao', 'exFilterMesVencimento', 'exFilterEmpresa', 'exFilterDepartamento']);
             document.getElementById('exFilterSituacao').value = 'ALL';
             if (document.getElementById('exFilterMesVencimento')) document.getElementById('exFilterMesVencimento').value = 'ALL';
             document.getElementById('exFilterEmpresa').value = 'ALL';
