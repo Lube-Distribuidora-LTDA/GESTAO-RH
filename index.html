@@ -1785,39 +1785,8 @@
             </div>
 
             <!-- Filters -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-4 mt-4 border-t border-slate-800">
-                <div class="lg:col-span-2">
-                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Buscar Colaborador</label>
-                    <div class="relative">
-                        <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
-                        <input type="text" id="ijFilterSearch" oninput="applyInterjornadaFilters()" placeholder="Nome do colaborador..." class="w-full bg-[#070d1e] border border-cyan-500/30 rounded-xl pl-9 pr-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Período (Ponto)</label>
-                    <select id="ijFilterMes" onchange="applyInterjornadaFilters()" class="w-full bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
-                        <option value="ALL">Todos os Períodos</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Empresa</label>
-                    <select id="ijFilterEmpresa" onchange="applyInterjornadaFilters()" class="w-full bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
-                        <option value="ALL">Todas as Empresas</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Função</label>
-                    <select id="ijFilterFuncao" onchange="applyInterjornadaFilters()" class="w-full bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
-                        <option value="ALL">Todas as Funções</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Situação</label>
-                    <select id="ijFilterSituacao" onchange="applyInterjornadaFilters()" class="w-full bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
-                        <option value="ALL">Todos os Colaboradores</option>
-                        <option value="VIOLACAO">Somente com violação de interjornada</option>
-                    </select>
-                </div>
+            <div id="ijFiltrosGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-4 mt-4 border-t border-slate-800">
+                <!-- Preenchido por renderFiltrosInterjornada(): todos são de múltipla escolha -->
             </div>
             <div class="flex justify-end pt-3">
                 <button onclick="resetInterjornadaFilters()" title="Limpar filtros" class="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 border border-slate-700 hover:border-cyan-500/40 transition cursor-pointer">
@@ -7520,6 +7489,153 @@
 
 
 
+
+        // ================================================================
+        // FILTRO DE MÚLTIPLA ESCOLHA (padrão de navegação dos BIs da Lube)
+        // ================================================================
+        // Contrato, igual ao dos outros painéis: a partir de "Todas", o clique
+        // seleciona só aquela opção; depois cada clique soma ou tira; esvaziar
+        // volta para "Todas". Conjunto vazio = tudo, então nenhum filtro começa
+        // escondendo dado.
+        //
+        // O mesmo componente serve para lista curta (situação, empresa) e para
+        // lista longa (78 colaboradores): acima de 10 opções aparece uma busca.
+        const multiEstado = {};   // id -> Set de valores escolhidos
+        const multiConfig = {};   // id -> { opcoes, rotuloTodos, aoMudar }
+
+        function registrarFiltroMulti(id, opcoes, rotuloTodos, aoMudar) {
+            const anterior = multiEstado[id];
+            multiConfig[id] = { opcoes: opcoes || [], rotuloTodos, aoMudar };
+            // Mantém o que já estava escolhido, desde que ainda exista na lista nova.
+            const validos = new Set((opcoes || []).map(o => o.valor));
+            multiEstado[id] = new Set([...(anterior || [])].filter(v => validos.has(v)));
+            renderFiltroMulti(id);
+        }
+
+        function multiSelecionados(id) {
+            return [...(multiEstado[id] || [])];
+        }
+
+        // Vazio quer dizer "todos" — por isso devolve true quando nada foi escolhido.
+        function multiAceita(id, valor) {
+            const s = multiEstado[id];
+            return !s || s.size === 0 || s.has(valor);
+        }
+
+        function multiEstaFiltrado(id) {
+            const s = multiEstado[id];
+            return !!s && s.size > 0;
+        }
+
+        function alternarFiltroMulti(id, valor) {
+            const s = multiEstado[id] || (multiEstado[id] = new Set());
+            if (s.has(valor)) s.delete(valor); else s.add(valor);
+            renderFiltroMulti(id);
+            const cfg = multiConfig[id];
+            if (cfg && typeof cfg.aoMudar === 'function') cfg.aoMudar();
+        }
+
+        function limparFiltroMulti(id, disparar = true) {
+            multiEstado[id] = new Set();
+            renderFiltroMulti(id);
+            const cfg = multiConfig[id];
+            if (disparar && cfg && typeof cfg.aoMudar === 'function') cfg.aoMudar();
+        }
+
+        function resumoFiltroMulti(id) {
+            const cfg = multiConfig[id] || {};
+            const s = multiEstado[id] || new Set();
+            if (s.size === 0) return cfg.rotuloTodos || 'Todos';
+            if (s.size === 1) {
+                const unico = cfg.opcoes.find(o => o.valor === [...s][0]);
+                return unico ? unico.rotulo : [...s][0];
+            }
+            return `${s.size} selecionados`;
+        }
+
+        function renderFiltroMulti(id) {
+            const botao = document.getElementById(`${id}-resumo`);
+            if (botao) botao.textContent = resumoFiltroMulti(id);
+
+            const marca = document.getElementById(`${id}-marca`);
+            if (marca) marca.classList.toggle('hidden', !multiEstaFiltrado(id));
+
+            const lista = document.getElementById(`${id}-lista`);
+            if (!lista) return;
+            const cfg = multiConfig[id] || { opcoes: [] };
+            const busca = (document.getElementById(`${id}-busca`)?.value || '').trim().toUpperCase();
+            const s = multiEstado[id] || new Set();
+
+            const visiveis = cfg.opcoes.filter(o => !busca || String(o.rotulo).toUpperCase().includes(busca));
+            if (visiveis.length === 0) {
+                lista.innerHTML = '<div class="px-3 py-4 text-center text-[11px] text-slate-500">Nada encontrado.</div>';
+                return;
+            }
+            lista.innerHTML = visiveis.map(o => {
+                const marcado = s.has(o.valor);
+                return `<button type="button" onclick="alternarFiltroMulti('${id}', ${JSON.stringify(o.valor).replace(/"/g, '&quot;')})"
+                    class="w-full flex items-center gap-2 px-3 py-1.5 text-left text-[11px] font-medium transition cursor-pointer ${marcado ? 'bg-cyan-950/60 text-cyan-200' : 'text-slate-300 hover:bg-slate-800/70'}">
+                    <span class="w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${marcado ? 'bg-cyan-500 border-cyan-400 text-[#070d1e]' : 'border-slate-600'}">${marcado ? '&check;' : ''}</span>
+                    <span class="truncate">${escapeHtml(o.rotulo)}</span>
+                </button>`;
+            }).join('');
+        }
+
+        function alternarPainelMulti(id) {
+            const painel = document.getElementById(`${id}-painel`);
+            if (!painel) return;
+            const abrindo = painel.classList.contains('hidden');
+            // Só um painel aberto por vez, senão eles se cobrem.
+            document.querySelectorAll('[data-painel-multi]').forEach(p => p.classList.add('hidden'));
+            if (abrindo) {
+                painel.classList.remove('hidden');
+                renderFiltroMulti(id);
+                const busca = document.getElementById(`${id}-busca`);
+                if (busca) { busca.value = ''; busca.focus(); }
+            }
+        }
+
+        // Clique fora fecha o painel aberto.
+        document.addEventListener('click', (ev) => {
+            if (ev.target.closest('[data-filtro-multi]')) return;
+            document.querySelectorAll('[data-painel-multi]').forEach(p => p.classList.add('hidden'));
+        });
+
+        // Monta o HTML de um filtro múltiplo. Usado direto no markup das seções.
+        function htmlFiltroMulti(id, rotulo, rotuloTodos, comBusca = false) {
+            return `
+                <div class="space-y-1.5 relative" data-filtro-multi="${id}">
+                    <label class="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase">
+                        ${escapeHtml(rotulo)}
+                        <span id="${id}-marca" class="hidden w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                    </label>
+                    <button type="button" onclick="alternarPainelMulti('${id}')"
+                        class="w-full flex items-center justify-between gap-2 bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 hover:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400 focus:outline-none transition shadow-inner cursor-pointer">
+                        <span id="${id}-resumo" class="truncate">${escapeHtml(rotuloTodos)}</span>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-500 shrink-0"></i>
+                    </button>
+                    <div id="${id}-painel" data-painel-multi class="hidden absolute z-40 mt-1 w-full min-w-[240px] bg-[#0b152b] border border-cyan-500/30 rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.7)] overflow-hidden">
+                        ${comBusca ? `<div class="p-2 border-b border-slate-800">
+                            <input type="text" id="${id}-busca" oninput="renderFiltroMulti('${id}')" placeholder="Buscar..."
+                                class="w-full bg-[#070d1e] border border-slate-700 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-100 focus:border-cyan-400 focus:outline-none">
+                        </div>` : ''}
+                        <div id="${id}-lista" class="max-h-64 overflow-y-auto py-1"></div>
+                        <div class="flex items-center justify-between gap-2 p-2 border-t border-slate-800 bg-[#070d1e]">
+                            <button type="button" onclick="limparFiltroMulti('${id}')" class="px-2 py-1 text-[10px] font-bold rounded-lg bg-slate-800/80 text-slate-300 border border-slate-700 hover:bg-slate-700/80 transition cursor-pointer">${escapeHtml(rotuloTodos)}</button>
+                            <button type="button" onclick="alternarPainelMulti('${id}')" class="px-2 py-1 text-[10px] font-bold rounded-lg bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-900/80 transition cursor-pointer">Fechar</button>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        // Descreve os filtros ativos em texto, para o cabeçalho do Excel.
+        function descreverFiltroMulti(id) {
+            const cfg = multiConfig[id] || { opcoes: [] };
+            const s = multiEstado[id] || new Set();
+            if (s.size === 0) return cfg.rotuloTodos || 'Todos';
+            return cfg.opcoes.filter(o => s.has(o.valor)).map(o => o.rotulo).join(', ');
+        }
+
         // ================================================================
         // CADASTRO DE EMPREGADOS — importação, status e demissão
         // ================================================================
@@ -8815,51 +8931,63 @@
             applyInterjornadaFilters();
         }
 
+        // Monta os cinco filtros da aba, todos de múltipla escolha. O de colaborador
+        // e o de período são os que o RH mais combina — várias pessoas, vários meses.
+        function renderFiltrosInterjornada() {
+            const grid = document.getElementById('ijFiltrosGrid');
+            if (!grid || grid.dataset.montado) return;
+            grid.innerHTML =
+                `<div class="lg:col-span-2">${htmlFiltroMulti('ijMultiColaborador', 'Colaborador', 'Todos os Colaboradores', true)}</div>` +
+                htmlFiltroMulti('ijMultiPeriodo', 'Período (Ponto)', 'Todos os Períodos', true) +
+                htmlFiltroMulti('ijMultiEmpresa', 'Empresa', 'Todas as Empresas') +
+                htmlFiltroMulti('ijMultiFuncao', 'Função', 'Todas as Funções') +
+                htmlFiltroMulti('ijMultiSituacao', 'Situação', 'Todas as Situações');
+            grid.dataset.montado = '1';
+            safeCreateIcons();
+        }
+
         function populateInterjornadaFilterOptions() {
-            const mesSel = document.getElementById('ijFilterMes');
-            const funcSel = document.getElementById('ijFilterFuncao');
-            const empSel = document.getElementById('ijFilterEmpresa');
-            if (!mesSel || !funcSel) return;
+            renderFiltrosInterjornada();
+            const linhas = interjornadaAnalysisRows || [];
 
-            if (empSel) {
-                const empresas = [...new Set(interjornadaAnalysisRows.map(r => empresaDoColaborador(r.colaborador_nome)))];
-                const ordenadas = empresas.filter(e => e !== EMPRESA_NAO_IDENTIFICADA).sort()
-                    .concat(empresas.includes(EMPRESA_NAO_IDENTIFICADA) ? [EMPRESA_NAO_IDENTIFICADA] : []);
-                const atual = empSel.value;
-                empSel.innerHTML = '<option value="ALL">Todas as Empresas</option>' +
-                    ordenadas.map(e => `<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join('');
-                if (ordenadas.includes(atual)) empSel.value = atual;
-            }
+            const competencias = [...new Set(linhas.map(r => r.competencia))].sort().reverse();
+            registrarFiltroMulti('ijMultiPeriodo',
+                competencias.map(c => ({ valor: c, rotulo: formatCompetenciaLabelLongo(c, interjornadaDiaCorte) })),
+                'Todos os Períodos', applyInterjornadaFilters);
 
-            const competencias = [...new Set(interjornadaAnalysisRows.map(r => r.competencia))].sort();
-            const curMes = mesSel.value;
-            mesSel.innerHTML = '<option value="ALL">Todos os Períodos</option>' + competencias.map(c => {
-                return `<option value="${c}">${escapeHtml(formatCompetenciaLabelLongo(c, interjornadaDiaCorte))}</option>`;
-            }).join('');
-            if (competencias.includes(curMes)) mesSel.value = curMes;
+            const nomes = [...new Set(linhas.map(r => r.colaborador_nome).filter(Boolean))].sort();
+            registrarFiltroMulti('ijMultiColaborador',
+                nomes.map(n => ({ valor: n, rotulo: n })),
+                'Todos os Colaboradores', applyInterjornadaFilters);
 
-            const funcs = [...new Set(interjornadaAnalysisRows.map(r => normalizeFuncao(r.funcao)).filter(Boolean))].sort();
-            const curFunc = funcSel.value;
-            funcSel.innerHTML = '<option value="ALL">Todas as Funções</option>' + funcs.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('') + '<option value="__SEM_FUNCAO__">Não informado</option>';
-            if ([...funcSel.options].some(o => o.value === curFunc)) funcSel.value = curFunc;
+            const empresas = [...new Set(linhas.map(r => empresaDoColaborador(r.colaborador_nome)))];
+            const empresasOrd = empresas.filter(e => e !== EMPRESA_NAO_IDENTIFICADA).sort()
+                .concat(empresas.includes(EMPRESA_NAO_IDENTIFICADA) ? [EMPRESA_NAO_IDENTIFICADA] : []);
+            registrarFiltroMulti('ijMultiEmpresa',
+                empresasOrd.map(e => ({ valor: e, rotulo: e })),
+                'Todas as Empresas', applyInterjornadaFilters);
+
+            const funcoes = [...new Set(linhas.map(r => r.funcao ? normalizeFuncao(r.funcao) : '__SEM_FUNCAO__'))];
+            const funcoesOrd = funcoes.filter(f => f !== '__SEM_FUNCAO__').sort()
+                .concat(funcoes.includes('__SEM_FUNCAO__') ? ['__SEM_FUNCAO__'] : []);
+            registrarFiltroMulti('ijMultiFuncao',
+                funcoesOrd.map(f => ({ valor: f, rotulo: f === '__SEM_FUNCAO__' ? 'Não informado' : f })),
+                'Todas as Funções', applyInterjornadaFilters);
+
+            registrarFiltroMulti('ijMultiSituacao', [
+                { valor: 'VIOLACAO', rotulo: 'Com violação de interjornada' },
+                { valor: 'OK', rotulo: 'Sem violação' }
+            ], 'Todas as Situações', applyInterjornadaFilters);
         }
 
         function applyInterjornadaFilters() {
-            const mes = document.getElementById('ijFilterMes').value;
-            const funcao = document.getElementById('ijFilterFuncao').value;
-            const empresaIj = document.getElementById('ijFilterEmpresa') ? document.getElementById('ijFilterEmpresa').value : 'ALL';
-            const situacao = document.getElementById('ijFilterSituacao').value;
-            const search = document.getElementById('ijFilterSearch').value.trim().toUpperCase();
-
-            interjornadaFilteredRows = interjornadaAnalysisRows.filter(r => {
-                if (mes !== 'ALL' && r.competencia !== mes) return false;
-                if (funcao !== 'ALL') {
-                    if (funcao === '__SEM_FUNCAO__') { if (r.funcao) return false; }
-                    else if (normalizeFuncao(r.funcao) !== funcao) return false;
-                }
-                if (empresaIj !== 'ALL' && empresaDoColaborador(r.colaborador_nome) !== empresaIj) return false;
-                if (situacao === 'VIOLACAO' && !r.violacao) return false;
-                if (search && !String(r.colaborador_nome || '').toUpperCase().includes(search)) return false;
+            // Cada filtro vazio significa "todos", então nenhum deles começa escondendo dado.
+            interjornadaFilteredRows = (interjornadaAnalysisRows || []).filter(r => {
+                if (!multiAceita('ijMultiPeriodo', r.competencia)) return false;
+                if (!multiAceita('ijMultiColaborador', r.colaborador_nome)) return false;
+                if (!multiAceita('ijMultiEmpresa', empresaDoColaborador(r.colaborador_nome))) return false;
+                if (!multiAceita('ijMultiFuncao', r.funcao ? normalizeFuncao(r.funcao) : '__SEM_FUNCAO__')) return false;
+                if (!multiAceita('ijMultiSituacao', r.violacao ? 'VIOLACAO' : 'OK')) return false;
                 return true;
             });
 
@@ -8870,11 +8998,8 @@
         }
 
         function resetInterjornadaFilters() {
-            document.getElementById('ijFilterMes').value = 'ALL';
-            document.getElementById('ijFilterFuncao').value = 'ALL';
-            if (document.getElementById('ijFilterEmpresa')) document.getElementById('ijFilterEmpresa').value = 'ALL';
-            document.getElementById('ijFilterSituacao').value = 'ALL';
-            document.getElementById('ijFilterSearch').value = '';
+            ['ijMultiPeriodo', 'ijMultiColaborador', 'ijMultiEmpresa', 'ijMultiFuncao', 'ijMultiSituacao']
+                .forEach(id => limparFiltroMulti(id, false));
             applyInterjornadaFilters();
         }
 
@@ -9106,11 +9231,11 @@
 
         // --- Ficha do colaborador: sempre mostra o ponto diário COMPLETO, independente dos filtros ativos ---
         function openInterjornadaFicha(nome) {
-            // Respeita o período selecionado no filtro (ex.: "Ago/26") — a ficha mostra só os
-            // dias daquele período de apuração, não o histórico completo do colaborador.
-            const periodoFiltro = document.getElementById('ijFilterMes').value;
+            // Respeita os períodos selecionados no filtro — a ficha mostra só os dias
+            // daqueles períodos de apuração, não o histórico completo do colaborador.
+            const periodosSel = multiSelecionados('ijMultiPeriodo');
             let registros = interjornadaAnalysisRows.filter(r => r.colaborador_nome === nome);
-            if (periodoFiltro !== 'ALL') registros = registros.filter(r => r.competencia === periodoFiltro);
+            if (periodosSel.length > 0) registros = registros.filter(r => periodosSel.includes(r.competencia));
             registros = registros.sort((a, b) => a.data_iso.localeCompare(b.data_iso));
             if (registros.length === 0) return;
 
@@ -9118,7 +9243,11 @@
             const funcaoInfo = registros.find(r => r.funcao);
             const funcao = funcaoInfo ? funcaoInfo.funcao : 'Função não informada';
             const equipe = registros[0].equipe || 'LLOG';
-            const periodoLabel = periodoFiltro !== 'ALL' ? formatCompetenciaLabel(periodoFiltro, interjornadaDiaCorte) : 'Todo o histórico importado';
+            const periodoLabel = periodosSel.length === 0
+                ? 'Todo o histórico importado'
+                : periodosSel.length === 1
+                    ? formatCompetenciaLabel(periodosSel[0], interjornadaDiaCorte)
+                    : `${periodosSel.length} períodos selecionados`;
 
             document.getElementById('ijFichaAvatar').textContent = iniciais || '?';
             document.getElementById('ijFichaNome').textContent = nome;
@@ -9328,10 +9457,64 @@
 
                 worksheet.columns.forEach((col, idx) => { col.width = [34, 22, 14, 18, 14, 14][idx] || 16; });
 
+                // Segunda aba com TODAS as linhas filtradas, dia a dia. O resumo acima responde
+                // "quem", esta responde "quando e por quê" — e é ela que leva os filtros aplicados.
+                const detalhe = workbook.addWorksheet('Detalhe por dia', { views: [{ showGridLines: true, state: 'frozen', ySplit: 4 }] });
+
+                detalhe.mergeCells('A1:J1');
+                const t2 = detalhe.getCell('A1');
+                t2.value = 'INTERJORNADAS • DETALHE POR DIA';
+                t2.font = { name: 'Arial', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
+                t2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1B3D' } };
+                t2.alignment = { vertical: 'middle', horizontal: 'center' };
+                detalhe.getRow(1).height = 24;
+
+                detalhe.mergeCells('A2:J2');
+                const f1 = detalhe.getCell('A2');
+                f1.value = `Períodos: ${descreverFiltroMulti('ijMultiPeriodo')}  •  Colaboradores: ${descreverFiltroMulti('ijMultiColaborador')}`;
+                f1.font = { size: 9, italic: true, color: { argb: 'FF444444' } };
+
+                detalhe.mergeCells('A3:J3');
+                const f2 = detalhe.getCell('A3');
+                f2.value = `Empresa: ${descreverFiltroMulti('ijMultiEmpresa')}  •  Função: ${descreverFiltroMulti('ijMultiFuncao')}  •  Situação: ${descreverFiltroMulti('ijMultiSituacao')}  •  ${interjornadaFilteredRows.length.toLocaleString('pt-BR')} registros  •  gerado em ${new Date().toLocaleString('pt-BR')}`;
+                f2.font = { size: 9, italic: true, color: { argb: 'FF444444' } };
+
+                const cab2 = detalhe.addRow(['Colaborador', 'Função', 'Empresa', 'Período (Ponto)', 'Data', 'Dia da Semana', '1ª Entrada', 'Última Saída', 'Horas Extras', 'Descanso até a próxima entrada', 'Situação']);
+                cab2.eachCell(cell => {
+                    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF7F1D1D' } };
+                    cell.alignment = { horizontal: 'center', wrapText: true };
+                });
+
+                [...interjornadaFilteredRows]
+                    .sort((a, b) => a.colaborador_nome.localeCompare(b.colaborador_nome) || a.data_iso.localeCompare(b.data_iso))
+                    .forEach(r => {
+                        const linha = detalhe.addRow([
+                            r.colaborador_nome,
+                            r.funcao || 'Não informado',
+                            empresaDoColaborador(r.colaborador_nome),
+                            formatCompetenciaLabel(r.competencia, interjornadaDiaCorte),
+                            formatDateBR(r.data_iso),
+                            r.dia_semana || '',
+                            r.entrada1 || r.entrada2 || '',
+                            r.saida2 || r.saida1 || '',
+                            Number(r.heHoras || 0),
+                            r.descansoMinutos === null ? '' : formatGapLabel(r.descansoMinutos),
+                            r.descansoMinutos === null ? 'Sem par de jornada' : (r.violacao ? 'VIOLAÇÃO' : 'OK')
+                        ]);
+                        if (r.violacao) {
+                            linha.getCell(11).font = { bold: true, color: { argb: 'FFC00000' } };
+                            linha.getCell(10).font = { bold: true, color: { argb: 'FFC00000' } };
+                        }
+                    });
+
+                detalhe.columns.forEach((col, idx) => { col.width = [32, 20, 34, 26, 12, 15, 12, 13, 13, 28, 18][idx] || 16; });
+                detalhe.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: 11 } };
+
                 const buffer = await workbook.xlsx.writeBuffer();
                 const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                 saveAs(blob, `Interjornadas_${new Date().toISOString().slice(0, 10)}.xlsx`);
-                showToast('Exportação Concluída!', 'A planilha de interjornadas foi baixada com sucesso.');
+                showToast('Exportação Concluída!', `${linhas.length} colaboradores no resumo e ${interjornadaFilteredRows.length.toLocaleString('pt-BR')} registros no detalhe.`);
             } catch (err) {
                 console.error('Erro ao exportar Excel de interjornada:', err);
                 showToast('Erro na Exportação', err.message || String(err), true);
