@@ -10,9 +10,13 @@
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
     <!-- Google Fonts: Plus Jakarta Sans & Inter (Clean, Executive & Modern) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Fontes da casa (Archivo, IBM Plex Sans, JetBrains Mono), servidas daqui -->
+    <link rel="stylesheet" href="fonts/fonts.css">
+    <script>
+        // Tema antes de pintar: sem isto a página piscava no claro antes do initTheme().
+        try { if ((localStorage.getItem('lube_theme') || 'dark') === 'dark') document.documentElement.classList.add('dark'); }
+        catch (e) { document.documentElement.classList.add('dark'); }
+    </script>
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -42,9 +46,9 @@
                         }
                     },
                     fontFamily: {
-                        sans: ['"Plus Jakarta Sans"', '"Inter"', 'system-ui', 'sans-serif'],
-                        heading: ['"Plus Jakarta Sans"', 'sans-serif'],
-                        mono: ['"Inter"', 'system-ui', 'sans-serif']
+                        sans: ['"IBM Plex Sans"', '"Segoe UI"', 'system-ui', 'sans-serif'],
+                        heading: ['"Archivo"', '"Segoe UI"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'Consolas', 'monospace']
                     },
                     boxShadow: {
                         'neon-red': '0 0 20px -2px rgba(227, 6, 19, 0.4), 0 0 4px 1px rgba(227, 6, 19, 0.6)',
@@ -73,433 +77,53 @@
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 
-    <style>
-        /* Custom Modern Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #070d1e;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #1e2d4a;
-            border-radius: 9999px;
-            border: 1px solid rgba(0, 212, 255, 0.2);
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #e30613;
-            box-shadow: 0 0 8px rgba(227, 6, 19, 0.8);
-        }
-
-        /* Glassmorphism & Neon Borders */
-        .glass-panel {
-            background: rgba(12, 21, 43, 0.75);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .dark .glass-panel {
-            background: rgba(8, 15, 33, 0.85);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(0, 212, 255, 0.12);
-        }
-
-        /* Sidebar Navigation */
-        .sidebar-nav-btn {
-            color: #94a3b8;
-            background: transparent;
-        }
-        .sidebar-nav-btn:hover {
-            background: rgba(0, 212, 255, 0.08);
-            color: #e2e8f0;
-        }
-        .sidebar-nav-btn.active {
-            background: linear-gradient(135deg, rgba(0, 212, 255, 0.18), rgba(0, 212, 255, 0.05));
-            color: #ffffff;
-            box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.35), 0 0 15px rgba(0, 212, 255, 0.15);
-        }
-
-        /* Executive 3D Card */
-        .executive-card {
-            background: linear-gradient(135deg, rgba(16, 28, 56, 0.85) 0%, rgba(8, 15, 33, 0.95) 100%);
-            border: 1px solid rgba(0, 212, 255, 0.15);
-            box-shadow: 0 15px 35px -5px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.08) inset;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        .executive-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.6), rgba(227, 6, 19, 0.6), transparent);
-            opacity: 0.6;
-            transition: opacity 0.3s ease;
-        }
-        .executive-card:hover {
-            transform: translateY(-3px);
-            border-color: rgba(0, 212, 255, 0.4);
-            box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.8), 0 0 25px -4px rgba(0, 212, 255, 0.25);
-        }
-        .executive-card:hover::before {
-            opacity: 1;
-        }
-
-        /* KPI Glow Accent */
-        .kpi-accent-red:hover {
-            border-color: rgba(227, 6, 19, 0.5);
-            box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.8), 0 0 25px -4px rgba(227, 6, 19, 0.35);
-        }
-
-        /* Subtle Professional Dark Grid Background */
-        body {
-            background-color: #030816;
-            background-image: 
-                radial-gradient(circle at 15% 15%, rgba(227, 6, 19, 0.07) 0%, transparent 40%),
-                radial-gradient(circle at 85% 85%, rgba(0, 212, 255, 0.07) 0%, transparent 40%),
-                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-            background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
-            background-attachment: fixed;
-        }
-
-        /* Clean Executive Text Glow */
-        .glow-text-cyan {
-            text-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
-        }
-        .glow-text-red {
-            text-shadow: 0 0 12px rgba(227, 6, 19, 0.5);
-        }
-
-        /* Custom FadeIn */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-            animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        @media print {
-            .no-print {
-                display: none !important;
-            }
-            body {
-                background: #ffffff !important;
-                color: #000000 !important;
-            }
-        }
-
-        /* ==========================================================
-           MODO CLARO (Light Mode)
-           O painel foi desenhado "dark-first"; este bloco reestiliza,
-           via seletores de classe, as superfícies e textos que só
-           existiam na versão escura. Escopado a html:not(.dark) para
-           nunca interferir no modo escuro (o padrão do arquivo).
-           ========================================================== */
-
-        /* Fundo da página */
-        html:not(.dark) body {
-            background-color: #eef2f9;
-            background-image:
-                radial-gradient(circle at 15% 15%, rgba(227, 6, 19, 0.05) 0%, transparent 40%),
-                radial-gradient(circle at 85% 85%, rgba(0, 212, 255, 0.06) 0%, transparent 40%),
-                linear-gradient(rgba(15, 23, 42, 0.025) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(15, 23, 42, 0.025) 1px, transparent 1px);
-            background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
-        }
-
-        /* Cards executivos */
-        html:not(.dark) .executive-card {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            border-color: rgba(15, 23, 42, 0.08);
-            box-shadow: 0 10px 28px -10px rgba(15, 23, 42, 0.14), 0 1px 0 rgba(255, 255, 255, 0.6) inset;
-        }
-        html:not(.dark) .executive-card:hover {
-            border-color: rgba(0, 212, 255, 0.35);
-            box-shadow: 0 16px 34px -10px rgba(15, 23, 42, 0.18), 0 0 20px -6px rgba(0, 212, 255, 0.2);
-        }
-
-        /* Sidebar e navegação */
-        html:not(.dark) #appSidebar,
-        html:not(.dark) #assistantPanel,
-        html:not(.dark) header {
-            background-color: rgba(255, 255, 255, 0.92) !important;
-            border-color: rgba(15, 23, 42, 0.08) !important;
-        }
-        html:not(.dark) #assistantPanel > div:first-child,
-        html:not(.dark) #assistantPanel > div:last-child {
-            background-color: #f8fafc !important;
-            border-color: rgba(15, 23, 42, 0.08) !important;
-        }
-        html:not(.dark) .sidebar-nav-btn {
-            color: #475569;
-        }
-        html:not(.dark) .sidebar-nav-btn:hover {
-            background: rgba(0, 212, 255, 0.08);
-            color: #0f172a;
-        }
-        html:not(.dark) .sidebar-nav-btn.active {
-            color: #0e7490;
-        }
-
-        /* Superfícies "recessadas" (inputs, cabeçalhos/rodapés de modal, badges internas) */
-        html:not(.dark) .bg-\[\#070d1e\] {
-            background-color: #f1f5f9 !important;
-        }
-        html:not(.dark) .border-\[\#070d1e\] {
-            border-color: #e2e8f0 !important;
-        }
-        html:not(.dark) .bg-\[\#0b152b\],
-        html:not(.dark) .bg-\[\#12203f\] {
-            background-color: #ffffff !important;
-        }
-
-        /* Texto principal */
-        html:not(.dark) .text-white { color: #0f172a !important; }
-        html:not(.dark) .text-slate-100 { color: #1e293b !important; }
-        html:not(.dark) .text-slate-200 { color: #334155 !important; }
-        html:not(.dark) .text-slate-300 { color: #475569 !important; }
-
-        /* Bordas */
-        html:not(.dark) .border-slate-800,
-        html:not(.dark) .border-slate-800\/80,
-        html:not(.dark) .border-slate-800\/60,
-        html:not(.dark) .border-slate-700,
-        html:not(.dark) .border-slate-600,
-        html:not(.dark) .divide-slate-800,
-        html:not(.dark) .divide-slate-800\/80 {
-            border-color: #e2e8f0 !important;
-        }
-
-        /* Botões e badges neutros (cinza escuro -> cinza claro) */
-        html:not(.dark) .bg-slate-800,
-        html:not(.dark) .bg-slate-800\/80,
-        html:not(.dark) .bg-slate-800\/60,
-        html:not(.dark) .bg-slate-800\/50,
-        html:not(.dark) .bg-slate-800\/40,
-        html:not(.dark) .bg-slate-700,
-        html:not(.dark) .bg-slate-700\/80,
-        html:not(.dark) .bg-slate-900,
-        html:not(.dark) .bg-slate-900\/90,
-        html:not(.dark) .bg-slate-900\/80 {
-            background-color: #eef1f6 !important;
-        }
-        html:not(.dark) .hover\:bg-slate-800:hover,
-        html:not(.dark) .hover\:bg-slate-800\/80:hover,
-        html:not(.dark) .hover\:bg-slate-800\/50:hover,
-        html:not(.dark) .hover\:bg-slate-800\/40:hover,
-        html:not(.dark) .hover\:bg-slate-700:hover,
-        html:not(.dark) .hover\:bg-slate-700\/80:hover {
-            background-color: #e2e8f0 !important;
-        }
-
-        /* Realces translúcidos brancos (pensados para fundo escuro) viram realces escuros translúcidos */
-        html:not(.dark) .bg-white\/10 { background-color: rgba(15, 23, 42, 0.045) !important; }
-        html:not(.dark) .bg-white\/5 { background-color: rgba(15, 23, 42, 0.03) !important; }
-        html:not(.dark) .border-white\/10 { border-color: rgba(15, 23, 42, 0.08) !important; }
-        html:not(.dark) .hover\:bg-white\/5:hover { background-color: rgba(15, 23, 42, 0.035) !important; }
-
-        /* Exceção: botões com fundo colorido/sólido próprio devem manter texto branco
-           (o texto neles nunca fica sobre o fundo claro da página, então .text-white
-           não deve ser escurecido nesses casos) */
-        html:not(.dark) .bg-gradient-to-r.text-white,
-        html:not(.dark) .bg-lube-navy.text-white,
-        html:not(.dark) .bg-lube-red.text-white {
-            color: #ffffff !important;
-        }
-
-        /* Texto de destaque (números, percentuais, KPIs) em tons claros pensados para
-           fundo escuro ficam ilegíveis sobre o fundo claro da página; escurecemos
-           mantendo o matiz original */
-        html:not(.dark) .text-cyan-300,
-        html:not(.dark) .text-cyan-400 { color: #0e7490 !important; }
-        html:not(.dark) .text-emerald-300,
-        html:not(.dark) .text-emerald-400 { color: #047857 !important; }
-        html:not(.dark) .text-red-300,
-        html:not(.dark) .text-red-400 { color: #b91c1c !important; }
-        html:not(.dark) .text-purple-300,
-        html:not(.dark) .text-purple-400 { color: #7e22ce !important; }
-        html:not(.dark) .text-amber-300,
-        html:not(.dark) .text-amber-400 { color: #b45309 !important; }
-        html:not(.dark) .text-blue-300,
-        html:not(.dark) .text-blue-400 { color: #1d4ed8 !important; }
-        html:not(.dark) .text-rose-400 { color: #be123c !important; }
-        html:not(.dark) .text-yellow-300,
-        html:not(.dark) .text-yellow-400 { color: #a16207 !important; }
-        html:not(.dark) .text-teal-300,
-        html:not(.dark) .text-teal-400 { color: #0f766e !important; }
-
-        /* Rótulo cinza claro (labels auxiliares tipo "Head Atual:", "entradas •") */
-        html:not(.dark) .text-slate-400 { color: #64748b !important; }
-        html:not(.dark) .text-slate-500 { color: #64748b !important; }
-
-        /* Faixas de cabeçalho de grupo (Turnover, Painel HEAD): eram lavagens quase
-           invisíveis sobre fundo claro; ganham um tingimento sutil porém perceptível */
-        html:not(.dark) .bg-purple-950\/30 { background-color: rgba(147, 51, 234, 0.09) !important; }
-        html:not(.dark) .bg-amber-950\/20 { background-color: rgba(245, 158, 11, 0.10) !important; }
-        html:not(.dark) .bg-emerald-950\/20,
-        html:not(.dark) .bg-emerald-950\/30 { background-color: rgba(16, 185, 129, 0.09) !important; }
-        html:not(.dark) .bg-cyan-950\/20,
-        html:not(.dark) .bg-cyan-950\/30 { background-color: rgba(6, 182, 212, 0.09) !important; }
-        html:not(.dark) .bg-red-950\/20,
-        html:not(.dark) .bg-red-950\/30 { background-color: rgba(239, 68, 68, 0.08) !important; }
-        html:not(.dark) .bg-blue-950\/20,
-        html:not(.dark) .bg-blue-950\/30 { background-color: rgba(59, 130, 246, 0.09) !important; }
-
-        /* Badges/chips (ícones de KPI, "Editar", "HEAD ADEQUADO" etc.): fundo -950
-           semi-opaco + texto claro, pensados como um "chip escuro" independente do
-           tema. Reforçamos a opacidade do fundo para virar um chip sólido e mantemos
-           o texto claro original (em vez de escurecê-lo como no texto solto acima),
-           já que texto escuro sobre chip escuro perde contraste. */
-        html:not(.dark) .bg-red-950\/60,
-        html:not(.dark) .bg-red-950\/80,
-        html:not(.dark) .bg-red-950 { background-color: #7f1d1d !important; }
-        html:not(.dark) .bg-amber-950\/60,
-        html:not(.dark) .bg-amber-950\/80,
-        html:not(.dark) .bg-amber-950 { background-color: #78350f !important; }
-        html:not(.dark) .bg-emerald-950\/60,
-        html:not(.dark) .bg-emerald-950\/50,
-        html:not(.dark) .bg-emerald-950\/40,
-        html:not(.dark) .bg-emerald-950\/80,
-        html:not(.dark) .bg-emerald-950 { background-color: #064e3b !important; }
-        html:not(.dark) .bg-cyan-950\/60,
-        html:not(.dark) .bg-cyan-950\/80,
-        html:not(.dark) .bg-cyan-950 { background-color: #164e63 !important; }
-        html:not(.dark) .bg-purple-950\/60,
-        html:not(.dark) .bg-purple-950\/80,
-        html:not(.dark) .bg-purple-950 { background-color: #581c87 !important; }
-        html:not(.dark) .bg-blue-950\/60,
-        html:not(.dark) .bg-blue-950\/80 { background-color: #1e3a8a !important; }
-        html:not(.dark) .bg-yellow-950\/60,
-        html:not(.dark) .bg-yellow-950\/80,
-        html:not(.dark) .bg-yellow-950 { background-color: #713f12 !important; }
-        html:not(.dark) .bg-teal-950\/60,
-        html:not(.dark) .bg-teal-950\/80,
-        html:not(.dark) .bg-teal-950 { background-color: #134e4a !important; }
-
-        /* Restaura o texto claro original nesses chips (specificidade maior que o
-           escurecimento geral de texto-de-destaque acima) */
-        html:not(.dark) .bg-yellow-950\/60.text-yellow-300,
-        html:not(.dark) .bg-yellow-950\/80.text-yellow-300,
-        html:not(.dark) .bg-yellow-950.text-yellow-300 { color: #fde047 !important; }
-        html:not(.dark) .bg-teal-950\/60.text-teal-300,
-        html:not(.dark) .bg-teal-950\/80.text-teal-300,
-        html:not(.dark) .bg-teal-950.text-teal-300 { color: #5eead4 !important; }
-        html:not(.dark) .bg-blue-950\/80.text-blue-300 { color: #93c5fd !important; }
-        html:not(.dark) .bg-red-950\/60.text-red-300,
-        html:not(.dark) .bg-red-950\/80.text-red-300,
-        html:not(.dark) .bg-red-950.text-red-300 { color: #fca5a5 !important; }
-        html:not(.dark) .bg-red-950\/60.text-red-400,
-        html:not(.dark) .bg-red-950\/80.text-red-400,
-        html:not(.dark) .bg-red-950.text-red-400 { color: #f87171 !important; }
-        html:not(.dark) .bg-amber-950\/60.text-amber-300,
-        html:not(.dark) .bg-amber-950\/80.text-amber-300,
-        html:not(.dark) .bg-amber-950.text-amber-300 { color: #fcd34d !important; }
-        html:not(.dark) .bg-amber-950\/60.text-amber-400,
-        html:not(.dark) .bg-amber-950\/80.text-amber-400,
-        html:not(.dark) .bg-amber-950.text-amber-400 { color: #fbbf24 !important; }
-        html:not(.dark) .bg-emerald-950\/60.text-emerald-300,
-        html:not(.dark) .bg-emerald-950\/50.text-emerald-300,
-        html:not(.dark) .bg-emerald-950\/40.text-emerald-300,
-        html:not(.dark) .bg-emerald-950\/80.text-emerald-300,
-        html:not(.dark) .bg-emerald-950.text-emerald-300 { color: #6ee7b7 !important; }
-        html:not(.dark) .bg-emerald-950\/60.text-emerald-400,
-        html:not(.dark) .bg-emerald-950\/50.text-emerald-400,
-        html:not(.dark) .bg-emerald-950\/40.text-emerald-400,
-        html:not(.dark) .bg-emerald-950\/80.text-emerald-400,
-        html:not(.dark) .bg-emerald-950.text-emerald-400 { color: #34d399 !important; }
-        html:not(.dark) .bg-cyan-950\/60.text-cyan-300,
-        html:not(.dark) .bg-cyan-950\/80.text-cyan-300,
-        html:not(.dark) .bg-cyan-950.text-cyan-300 { color: #67e8f9 !important; }
-        html:not(.dark) .bg-cyan-950\/60.text-cyan-400,
-        html:not(.dark) .bg-cyan-950\/80.text-cyan-400,
-        html:not(.dark) .bg-cyan-950.text-cyan-400 { color: #22d3ee !important; }
-        html:not(.dark) .bg-purple-950\/60.text-purple-300,
-        html:not(.dark) .bg-purple-950\/80.text-purple-300,
-        html:not(.dark) .bg-purple-950.text-purple-300 { color: #d8b4fe !important; }
-        html:not(.dark) .bg-purple-950\/60.text-purple-400,
-        html:not(.dark) .bg-purple-950\/80.text-purple-400,
-        html:not(.dark) .bg-purple-950.text-purple-400 { color: #c084fc !important; }
-        html:not(.dark) .bg-blue-950\/60.text-blue-300 { color: #93c5fd !important; }
-        html:not(.dark) .bg-blue-950\/60.text-blue-400 { color: #60a5fa !important; }
-
-        /* Ícone de tema: usa o mesmo par sol/lua já presente no botão, sem alterações adicionais aqui */
-    </style>
+    <!-- Cara dos sistemas atuais da Lube: tokens e componentes + cores do Tailwind reapontadas -->
+    <link rel="stylesheet" href="css/tema-lube.css">
+    <link rel="stylesheet" href="css/tema-utilitarios.css">
 </head>
-<body class="text-slate-200 min-h-screen font-sans transition-colors duration-200 antialiased selection:bg-lube-red selection:text-white">
+<body class="min-h-screen font-sans antialiased">
 
     <!-- Sidebar Overlay (Mobile) -->
     <div id="sidebarOverlay" onclick="closeSidebarMobile()" class="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm hidden lg:hidden no-print"></div>
 
     <!-- LEFT SIDEBAR NAVIGATION -->
-    <aside id="appSidebar" class="fixed inset-y-0 left-0 z-50 w-64 -translate-x-full lg:translate-x-0 transition-transform duration-300 bg-[#070d1e] border-r border-cyan-500/20 flex flex-col no-print">
-        <div class="flex items-center gap-3 px-5 py-5 border-b border-cyan-500/20">
-            <div class="bg-white/95 p-1.5 rounded-xl shadow-[0_0_15px_rgba(255,255,255,0.2)] border border-cyan-500/30 flex items-center justify-center shrink-0">
-                <img src="imagens/lube-logo.png" alt="Lube Distribuidora" class="h-8 w-auto object-contain" onerror="this.onerror=null; this.src='assets/imagens/lube-logo.png';">
-            </div>
-            <div class="min-w-0">
-                <p class="text-sm font-extrabold text-white tracking-tight font-orbitron truncate">GESTÃO RH</p>
-            </div>
-            <button onclick="closeSidebarMobile()" class="ml-auto p-1.5 rounded-lg bg-slate-800 text-slate-300 lg:hidden cursor-pointer">
-                <i data-lucide="x" class="w-4 h-4"></i>
-            </button>
+    <aside id="appSidebar" class="fixed inset-y-0 left-0 z-50 -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col no-print" aria-label="Menu">
+        <div class="marca">
+            <div class="placa"><img src="imagens/lube-logo.png" alt="Lube Distribuidora" onerror="this.onerror=null; this.src='assets/imagens/lube-logo.png';"></div>
+            <div class="nome">Gestão RH<small>Lube Distribuidora</small></div>
+            <button onclick="closeSidebarMobile()" class="btn-ic fechar-menu lg:hidden" title="Fechar menu" aria-label="Fechar menu"><i data-lucide="x"></i></button>
         </div>
-
-        <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1.5">
-            <button onclick="switchSection('absenteismo')" data-section-nav="absenteismo" class="sidebar-nav-btn active w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition cursor-pointer">
-                <i data-lucide="bar-chart-3" class="w-4.5 h-4.5 shrink-0"></i>
-                <span>Absenteísmo</span>
+        <nav class="menu-itens">
+            <div class="grupo-menu">Ausências e jornada</div>
+            <button onclick="switchSection('absenteismo')" data-section-nav="absenteismo" class="item-menu sidebar-nav-btn active">
+                <i data-lucide="bar-chart-3"></i><span>Absenteísmo</span>
             </button>
-            <button onclick="switchSection('turnover')" data-section-nav="turnover" class="sidebar-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition cursor-pointer">
-                <i data-lucide="repeat" class="w-4.5 h-4.5 shrink-0"></i>
-                <span>Turnover</span>
+            <button onclick="switchSection('interjornada')" data-section-nav="interjornada" class="item-menu sidebar-nav-btn">
+                <i data-lucide="bed"></i><span>InterJornadas</span>
             </button>
-            <button onclick="switchSection('empregados')" data-section-nav="empregados" class="sidebar-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition cursor-pointer">
-                <i data-lucide="users" class="w-4.5 h-4.5 shrink-0"></i>
-                <span>Empregados</span>
+            <button onclick="switchSection('horaextra')" data-section-nav="horaextra" class="item-menu sidebar-nav-btn">
+                <i data-lucide="clock"></i><span>Pagamento Hora Extra</span>
             </button>
-            <button onclick="switchSection('head')" data-section-nav="head" class="sidebar-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition cursor-pointer">
-                <i data-lucide="target" class="w-4.5 h-4.5 shrink-0"></i>
-                <span>Painel HEAD</span>
+            <div class="grupo-menu">Quadro de pessoal</div>
+            <button onclick="switchSection('empregados')" data-section-nav="empregados" class="item-menu sidebar-nav-btn">
+                <i data-lucide="users"></i><span>Empregados</span>
             </button>
-            <button onclick="switchSection('horaextra')" data-section-nav="horaextra" class="sidebar-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition cursor-pointer">
-                <i data-lucide="clock" class="w-4.5 h-4.5 shrink-0"></i>
-                <span>Pagamento Hora Extra</span>
+            <button onclick="switchSection('head')" data-section-nav="head" class="item-menu sidebar-nav-btn">
+                <i data-lucide="target"></i><span>Painel HEAD</span>
             </button>
-            <button onclick="switchSection('interjornada')" data-section-nav="interjornada" class="sidebar-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition cursor-pointer">
-                <i data-lucide="bed" class="w-4.5 h-4.5 shrink-0"></i>
-                <span>InterJornadas</span>
+            <button onclick="switchSection('turnover')" data-section-nav="turnover" class="item-menu sidebar-nav-btn">
+                <i data-lucide="repeat"></i><span>Turnover</span>
             </button>
-            <button onclick="switchSection('exames')" data-section-nav="exames" class="sidebar-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition cursor-pointer">
-                <i data-lucide="stethoscope" class="w-4.5 h-4.5 shrink-0"></i>
-                <span>Exames Periódicos</span>
+            <div class="grupo-menu">Saúde ocupacional</div>
+            <button onclick="switchSection('exames')" data-section-nav="exames" class="item-menu sidebar-nav-btn">
+                <i data-lucide="stethoscope"></i><span>Exames Periódicos</span>
             </button>
         </nav>
-
-        <div class="px-5 py-4 border-t border-cyan-500/20 text-[10px] text-slate-500">
-            Lube Distribuidora &bull; Gestão Estratégica de Pessoas
-            <span id="buildVersion" class="block mt-1 text-[9px] text-slate-600" title="Versão publicada deste painel"></span>
+        <div class="menu-rodape">
+            <span class="vivo"></span><b>Lube Distribuidora</b> · Gestão de Pessoas
+            <span id="buildVersion" class="versao" title="Versão publicada deste painel"></span>
         </div>
     </aside>
-
-    <!-- Mobile Topbar Toggle -->
-    <button onclick="openSidebarMobile()" class="fixed top-3 left-3 z-30 lg:hidden p-2.5 rounded-xl bg-[#070d1e] border border-cyan-500/30 text-cyan-300 shadow-lg no-print">
-        <i data-lucide="menu" class="w-5 h-5"></i>
-    </button>
 
     <!-- ASSISTENTE VIRTUAL DO RH: Floating Button (bottom-right, visible on every section) -->
     <button id="assistantFab" onclick="toggleAssistantPanel()" title="Assistente Virtual do RH" class="fixed bottom-6 right-6 z-40 w-16 h-16 rounded-full shadow-[0_0_25px_rgba(0,212,255,0.5)] border-2 border-cyan-400/50 overflow-hidden transition hover:scale-110 cursor-pointer no-print bg-white">
@@ -534,237 +158,93 @@
 
     <div id="appContent" class="lg:pl-64">
 
-    <!-- Top Header Bar (Cyberpunk/Futuristic Theme) -->
-    <header class="sticky top-0 z-30 bg-[#070d1e]/85 backdrop-blur-xl border-b border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.8)] transition-all duration-300 no-print">
-        <div class="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-3">
-            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
-                
-                <!-- Section Title (logo lives only in the sidebar now) -->
-                <div class="flex items-center gap-4">
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h1 id="sectionTitleMain" class="text-xl font-extrabold text-white tracking-tight font-orbitron glow-text-cyan flex items-center gap-2">
-                                BI DE ABSENTEÍSMO RH
-                            </h1>
-                            <span class="whitespace-nowrap px-2.5 py-0.5 text-[10px] font-extrabold tracking-wider rounded-full bg-red-950/80 text-red-400 border border-red-500/50 shadow-[0_0_10px_rgba(227,6,19,0.5)]">
-                                PRO RH
-                            </span>
-                        </div>
-                        <p id="sectionSubtitleMain" class="text-xs text-slate-400 font-medium">KPI's - indicador de perfomace</p>
-                    </div>
+    <!-- Topo: olho em ouro + título, ações à direita (padrão dos sistemas atuais) -->
+    <header class="topo-rh no-print">
+        <button class="btn-ic btn-menu" onclick="openSidebarMobile()" title="Menu" aria-label="Abrir menu"><i data-lucide="menu"></i></button>
+        <div class="tit">
+            <div class="olho" id="sectionEyebrow">Gestão RH · Ausências e jornada</div>
+            <h1 id="sectionTitleMain">Absenteísmo</h1>
+            <p id="sectionSubtitleMain" class="sub"></p>
+        </div>
+        <div class="acoes">
+            <!-- Situação do banco -->
+            <button id="supabaseStatusBadge" onclick="openSupabaseModal()" title="Situação da conexão com o banco" class="status-banco">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" id="supabasePulseDot"></span>
+                <span id="supabaseStatusText">Banco: conectado</span>
+            </button>
+
+            <!-- Ações só do Absenteísmo -->
+            <div id="absenteismoHeaderActions" class="acoes">
+                <div id="baseHeaderBadge" class="hidden 2xl:inline-flex tag-base">
+                    <i data-lucide="database"></i>
+                    <span id="baseHeaderBadgeText">Aguardando dados...</span>
                 </div>
-
-                <!-- Right Action Bar -->
-                <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-
-                    <!-- Supabase Connection Status Badge -->
-                    <button id="supabaseStatusBadge" onclick="openSupabaseModal()" title="Status da Conexão com Banco Supabase Cloud" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/40 text-xs font-semibold text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)] transition cursor-pointer">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" id="supabasePulseDot"></span>
-                        <span id="supabaseStatusText">Supabase: Conectado</span>
-                    </button>
-
-                    <!-- Absenteismo-specific header actions (hidden on other sections) -->
-                    <div id="absenteismoHeaderActions" class="flex flex-wrap items-center gap-2 sm:gap-3">
-
-                    <!-- Base Status Badge -->
-                    <div id="baseHeaderBadge" class="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-cyan-500/30 text-xs font-semibold text-slate-300 shadow-[inset_0_0_10px_rgba(0,212,255,0.08)]">
-                        <i data-lucide="database" class="w-3.5 h-3.5 text-cyan-400"></i>
-                        <span id="baseHeaderBadgeText">Aguardando dados...</span>
-                    </div>
-
-                    <!-- Viewing Historical Import Banner -->
-                    <button id="btnVoltarAtual" onclick="returnToLatestImport()" title="Voltar para a importação mais recente" class="hidden items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-950/60 hover:bg-amber-900/60 border border-amber-500/50 text-xs font-bold text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)] transition cursor-pointer animate-pulse">
-                        <i data-lucide="archive-restore" class="w-3.5 h-3.5"></i>
-                        <span>Visualizando Histórico &bull; Voltar ao Atual</span>
-                    </button>
-
-                    <!-- Novo Registro (Supabase Direct Insert) -->
-                    <button onclick="openNewRecordModal()" title="Cadastrar nova ocorrência diretamente no banco de dados" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-red-600 to-lube-red hover:from-red-500 hover:to-red-600 text-white shadow-neon-red transition cursor-pointer border border-red-400/40">
-                        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
-                        <span>Novo Registro</span>
-                    </button>
-
-                    <!-- Reset Filters Button -->
-                    <button id="btnResetFilters" onclick="resetAllFilters()" title="Redefinir todos os filtros" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 border border-slate-700 hover:border-cyan-500/40 transition cursor-pointer">
-                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                        <span>Limpar Filtros</span>
-                    </button>
-
-                    <!-- Export Excel -->
-                    <button onclick="exportToExcel()" title="Exportar dados filtrados para Excel estilizado (.xlsx)" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.35)] border border-emerald-400/40 transition cursor-pointer">
-                        <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
-                        <span>Exportar Excel</span>
-                    </button>
-
-                    <!-- Importar Planilha -->
-                    <button onclick="triggerImportExcel()" title="Importar ou atualizar planilha de absenteísmo (.xlsx)" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-blue-700 to-cyan-600 hover:from-blue-600 hover:to-cyan-500 text-white shadow-neon-blue border border-cyan-400/40 transition cursor-pointer">
-                        <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
-                        <span>Importar Planilha</span>
-                    </button>
-                    <input type="file" id="fileImportExcel" accept=".xlsx, .xls, .xlsm, .csv" onchange="handleExcelImport(event)" class="hidden">
-
-                    <!-- Histórico de Importações -->
-                    <button onclick="openHistoricoModal()" title="Ver histórico de planilhas importadas" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700 hover:border-cyan-500/40 transition cursor-pointer">
-                        <i data-lucide="history" class="w-3.5 h-3.5"></i>
-                        <span>Histórico</span>
-                    </button>
-
-                    </div><!-- /#absenteismoHeaderActions -->
-
-                    <!-- Theme Toggle -->
-                    <button id="themeToggle" onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 border border-slate-700 hover:border-cyan-500/40 transition cursor-pointer" title="Alternar Modo Escuro / Claro">
-                        <i data-lucide="moon" class="w-4 h-4 hidden dark:block text-cyan-400"></i>
-                        <i data-lucide="sun" class="w-4 h-4 block dark:hidden text-amber-400"></i>
-                    </button>
-                </div>
+                <button id="btnVoltarAtual" onclick="returnToLatestImport()" title="Voltar para a importação mais recente" class="hidden items-center btn" style="border-color: var(--atencao); color: var(--atencao);">
+                    <i data-lucide="archive-restore"></i>
+                    <span>Vendo histórico · voltar ao atual</span>
+                </button>
+                <button onclick="openNewRecordModal()" title="Cadastrar nova ocorrência diretamente no banco de dados" class="btn pri">
+                    <i data-lucide="plus"></i><span>Novo registro</span>
+                </button>
+                <button onclick="triggerImportExcel()" title="Importar ou atualizar planilha de absenteísmo (.xlsx)" class="btn">
+                    <i data-lucide="upload-cloud" class="ic-ouro"></i><span>Importar planilha</span>
+                </button>
+                <input type="file" id="fileImportExcel" accept=".xlsx, .xls, .xlsm, .csv" onchange="handleExcelImport(event)" class="hidden">
+                <button onclick="exportToExcel()" title="Exportar os dados filtrados para Excel (.xlsx)" class="btn">
+                    <i data-lucide="file-spreadsheet" class="ic-ok"></i><span>Excel</span>
+                </button>
+                <button onclick="openHistoricoModal()" title="Histórico de planilhas importadas" class="btn-ic" aria-label="Histórico">
+                    <i data-lucide="history"></i>
+                </button>
             </div>
+
+            <button id="themeToggle" onclick="toggleTheme()" class="btn-ic" title="Tema claro/escuro" aria-label="Tema claro/escuro">
+                <i data-lucide="moon" class="hidden dark:block"></i>
+                <i data-lucide="sun" class="block dark:hidden"></i>
+            </button>
         </div>
     </header>
 
     <!-- Main Container -->
     <main id="section-absenteismo" class="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        <!-- FILTER CONTROL PANEL (Cyber Glass) -->
-        <section class="executive-card rounded-2xl p-5 border border-cyan-500/20 shadow-[0_8px_32px_rgba(0,0,0,0.6)] no-print transition-all">
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
-                <div class="flex items-center gap-3">
-                    <div class="p-2 rounded-xl bg-red-950/60 border border-red-500/40 text-red-400 shadow-[0_0_12px_rgba(227,6,19,0.3)]">
-                        <i data-lucide="filter" class="w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-sm font-bold text-white uppercase tracking-wider font-orbitron glow-text-cyan flex items-center gap-2">
-                            Filtros Estratégicos &amp; Segmentação
-                        </h2>
-                        <p class="text-xs text-slate-400">Refine a análise por períodos, setores, cargos, tipos de ausência ou colaborador</p>
-                    </div>
-                </div>
-
-                <!-- Active Filters Status Counter -->
-                <div class="flex items-center gap-3">
-                    <span id="filteredStatsBadge" class="px-3.5 py-1 text-xs font-bold rounded-full bg-cyan-950/60 text-cyan-300 border border-cyan-500/40 shadow-[0_0_12px_rgba(0,212,255,0.2)]">
-                        Carregando registros...
-                    </span>
-                </div>
+        <!-- FILTROS: faixa no padrão dos sistemas atuais (botão por dimensão, popover com busca, pílulas) -->
+        <section class="executive-card painel-filtros no-print">
+            <div class="faixa-rh" data-limpar="resetAllFilters" data-periodo="filterMonthMulti">
+                <div><label>Empresa</label><select id="filterEmpresa" onchange="applyFilters()" class="hidden"><option value="ALL">Todas as Empresas</option></select></div>
+                <div><label>Mês</label><select id="filterMonth" onchange="applyFilters()" class="hidden"><option value="ALL">Todos os Meses</option></select></div>
+                <div><label>Tipo</label><select id="filterTipo" onchange="applyFilters()" class="hidden">
+                    <option value="ALL">Todos os Tipos</option>
+                    <option value="Injustificado">Injustificado (Faltas/Suspens&otilde;es)</option>
+                    <option value="Justificado">Justificado (Atestados/Licen&ccedil;as/Abonos)</option>
+                    <option value="Compensacao/Folga">Compensa&ccedil;&atilde;o / Folga / BH</option>
+                    <option value="Desenvolvimento">Treinamento / Cursos</option>
+                    <option value="Outros">Outros / Ajustes</option>
+                </select></div>
+                <div><label>Motivo</label><select id="filterMotivo" onchange="applyFilters()" class="hidden"><option value="ALL">Todos os Motivos</option></select></div>
+                <div><label>Setor</label><select id="filterSetor" onchange="applyFilters()" class="hidden"><option value="ALL">Todos os Setores</option></select></div>
+                <div><label>Fun&ccedil;&atilde;o</label><select id="filterFuncao" onchange="applyFilters()" class="hidden"><option value="ALL">Todas as Fun&ccedil;&otilde;es</option></select></div>
+                <div><label>Dia da semana</label><select id="filterDiaSemana" onchange="applyFilters()" class="hidden">
+                    <option value="ALL">Todos os Dias</option>
+                    <option value="Segunda-feira">Segunda-feira</option>
+                    <option value="Terca-feira">Ter&ccedil;a-feira</option>
+                    <option value="Quarta-feira">Quarta-feira</option>
+                    <option value="Quinta-feira">Quinta-feira</option>
+                    <option value="Sexta-feira">Sexta-feira</option>
+                    <option value="Sabado">S&aacute;bado</option>
+                    <option value="Domingo">Domingo</option>
+                </select></div>
+                <div class="busca-faixa"><i data-lucide="search"></i><input type="text" id="filterSearch" oninput="applyFilters()" placeholder="Buscar colaborador, cargo, setor ou motivo…" autocomplete="off" spellcheck="false"></div>
             </div>
-
-            <!-- Quick Presets Bar (Atalhos Executivos de 1-Clique) -->
-            <div class="flex items-center gap-2 pt-3 overflow-x-auto pb-1 text-xs no-scrollbar">
-                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap flex items-center gap-1">
-                    <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400 animate-pulse"></i> Atalhos:
-                </span>
-                <button type="button" onclick="applyPreset('all')" id="preset-all" class="preset-btn px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-neon-blue cursor-pointer border border-cyan-400/40">
-                    <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Todos
-                </button>
-                <button type="button" onclick="applyPreset('injustificado')" id="preset-injustificado" class="preset-btn px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap bg-slate-900/90 text-slate-300 hover:bg-red-950/60 hover:text-red-300 border border-slate-800 hover:border-red-500/40 cursor-pointer">
-                    <span class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_6px_#ef4444]"></span> Foco Faltas Injustificadas
-                </button>
-                <button type="button" onclick="applyPreset('segundas')" id="preset-segundas" class="preset-btn px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap bg-slate-900/90 text-slate-300 hover:bg-purple-950/60 hover:text-purple-300 border border-slate-800 hover:border-purple-500/40 cursor-pointer">
-                    <i data-lucide="calendar-alert" class="w-3.5 h-3.5 text-purple-400"></i> Pico Segundas-Feiras
-                </button>
-                <button type="button" onclick="applyPreset('entrega')" id="preset-entrega" class="preset-btn px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap bg-slate-900/90 text-slate-300 hover:bg-amber-950/60 hover:text-amber-300 border border-slate-800 hover:border-amber-500/40 cursor-pointer">
-                    <i data-lucide="truck" class="w-3.5 h-3.5 text-amber-400"></i> Setor Crítico (ENTREGA)
-                </button>
-                <button type="button" onclick="applyPreset('justificado')" id="preset-justificado" class="preset-btn px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap bg-slate-900/90 text-slate-300 hover:bg-blue-950/60 hover:text-blue-300 border border-slate-800 hover:border-blue-500/40 cursor-pointer">
-                    <i data-lucide="stethoscope" class="w-3.5 h-3.5 text-blue-400"></i> Atestados &amp; Abonos
-                </button>
-                <!-- Aviso de empresa pendente: fica aqui, e não junto do filtro, porque dentro
-                     do rótulo ele empurrava o select para fora do alinhamento das outras colunas. -->
-                <button type="button" id="btnEmpresasPendentes" onclick="abrirModalEmpresas()" title="Definir a empresa dos colaboradores que não foram identificados" class="hidden ml-auto px-3 py-1.5 rounded-xl font-bold transition items-center gap-1.5 whitespace-nowrap bg-amber-950/80 text-amber-300 border border-amber-500/40 hover:bg-amber-900/80 cursor-pointer"></button>
-            </div>
-
-            <!-- Filter Inputs Grid (Futuristic Dark Inputs) -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 pt-4 border-t border-slate-800/80">
-
-                <!-- 0. Empresa (resolvida pelo nome do colaborador — a planilha não traz) -->
-                <div class="space-y-1.5">
-                    <label class="block text-xs font-bold text-slate-300">
-                        <i data-lucide="building-2" class="w-3.5 h-3.5 inline mr-1 text-cyan-400"></i> Empresa
-                    </label>
-                    <select id="filterEmpresa" onchange="applyFilters()" class="w-full bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
-                        <option value="ALL">Todas as Empresas</option>
-                    </select>
-                </div>
-                
-                <!-- 1. Período / Mês -->
-                <div class="space-y-1.5">
-                    <label class="block text-xs font-bold text-slate-300">
-                        <i data-lucide="calendar" class="w-3.5 h-3.5 inline mr-1 text-cyan-400"></i> M&ecirc;s / Ano
-                    </label>
-                    <select id="filterMonth" onchange="applyFilters()" class="w-full bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
-                        <option value="ALL">Todos os Meses</option>
-                    </select>
-                </div>
-
-                <!-- 2. Tipo de Absenteísmo -->
-                <div class="space-y-1.5">
-                    <label class="block text-xs font-bold text-slate-300">
-                        <i data-lucide="layers" class="w-3.5 h-3.5 inline mr-1 text-cyan-400"></i> Tipo de Aus&ecirc;ncia
-                    </label>
-                    <select id="filterTipo" onchange="applyFilters()" class="w-full bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
-                        <option value="ALL">Todos os Tipos</option>
-                        <option value="Injustificado">Injustificado (Faltas/Suspens&otilde;es)</option>
-                        <option value="Justificado">Justificado (Atestados/Licen&ccedil;as/Abonos)</option>
-                        <option value="Compensacao/Folga">Compensa&ccedil;&atilde;o / Folga / BH</option>
-                        <option value="Desenvolvimento">Treinamento / Cursos</option>
-                        <option value="Outros">Outros / Ajustes</option>
-                    </select>
-                </div>
-
-                <!-- 3. Motivo Específico -->
-                <div class="space-y-1.5">
-                    <label class="block text-xs font-bold text-slate-300">
-                        <i data-lucide="tag" class="w-3.5 h-3.5 inline mr-1 text-cyan-400"></i> Motivo
-                    </label>
-                    <select id="filterMotivo" onchange="applyFilters()" class="w-full bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
-                        <option value="ALL">Todos os Motivos</option>
-                    </select>
-                </div>
-
-                <!-- 4. Setor / Departamento -->
-                <div class="space-y-1.5">
-                    <label class="block text-xs font-bold text-slate-300">
-                        <i data-lucide="building" class="w-3.5 h-3.5 inline mr-1 text-cyan-400"></i> Setor
-                    </label>
-                    <select id="filterSetor" onchange="applyFilters()" class="w-full bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
-                        <option value="ALL">Todos os Setores</option>
-                    </select>
-                </div>
-
-                <!-- 5. Cargo / Função -->
-                <div class="space-y-1.5">
-                    <label class="block text-xs font-bold text-slate-300">
-                        <i data-lucide="briefcase" class="w-3.5 h-3.5 inline mr-1 text-cyan-400"></i> Fun&ccedil;&atilde;o / Cargo
-                    </label>
-                    <select id="filterFuncao" onchange="applyFilters()" class="w-full bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
-                        <option value="ALL">Todas as Fun&ccedil;&otilde;es</option>
-                    </select>
-                </div>
-
-                <!-- 6. Dia da Semana -->
-                <div class="space-y-1.5">
-                    <label class="block text-xs font-bold text-slate-300">
-                        <i data-lucide="clock" class="w-3.5 h-3.5 inline mr-1 text-cyan-400"></i> Dia da Semana
-                    </label>
-                    <select id="filterDiaSemana" onchange="applyFilters()" class="w-full bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
-                        <option value="ALL">Todos os Dias</option>
-                        <option value="Segunda-feira">Segunda-feira</option>
-                        <option value="Terca-feira">Ter&ccedil;a-feira</option>
-                        <option value="Quarta-feira">Quarta-feira</option>
-                        <option value="Quinta-feira">Quinta-feira</option>
-                        <option value="Sexta-feira">Sexta-feira</option>
-                        <option value="Sabado">S&aacute;bado</option>
-                        <option value="Domingo">Domingo</option>
-                    </select>
-                </div>
-
-            </div>
-
-            <!-- Search by Employee Bar -->
-            <div class="mt-3 pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-center gap-3">
-                <div class="relative w-full">
-                    <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-cyan-400"></i>
-                    <input type="text" id="filterSearch" oninput="applyFilters()" placeholder="Buscar colaborador por nome, cargo, setor ou motivo..." class="w-full pl-10 pr-4 py-2.5 bg-[#070d1e] border border-cyan-500/30 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
-                </div>
+            <div class="atalhos-rh">
+                <span class="fx-rot"><i data-lucide="zap"></i> Atalhos</span>
+                <button type="button" onclick="applyPreset('all')" id="preset-all" class="preset-btn px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer text-white"><i data-lucide="layout-grid"></i> Todos</button>
+                <button type="button" onclick="applyPreset('injustificado')" id="preset-injustificado" class="preset-btn px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer"><i data-lucide="alert-triangle"></i> Faltas injustificadas</button>
+                <button type="button" onclick="applyPreset('segundas')" id="preset-segundas" class="preset-btn px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer"><i data-lucide="calendar-x"></i> Segundas-feiras</button>
+                <button type="button" onclick="applyPreset('entrega')" id="preset-entrega" class="preset-btn px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer"><i data-lucide="truck"></i> Setor ENTREGA</button>
+                <button type="button" onclick="applyPreset('justificado')" id="preset-justificado" class="preset-btn px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer"><i data-lucide="stethoscope"></i> Atestados e abonos</button>
+                <button type="button" id="btnEmpresasPendentes" onclick="abrirModalEmpresas()" title="Definir a empresa dos colaboradores que não foram identificados" class="hidden atalho-btn items-center gap-1.5 whitespace-nowrap" style="color: var(--atencao) !important; border-color: color-mix(in srgb, var(--atencao) 45%, transparent) !important;"></button>
+                <span id="filteredStatsBadge" class="contagem-rh">Carregando registros…</span>
             </div>
         </section>
 
@@ -1128,10 +608,10 @@
                     </div>
                 </div>
                 <div class="flex flex-wrap items-center gap-2.5">
-                    <select id="turnoverFilterAno" onchange="applyTurnoverFilters()" class="bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
+                    <select id="turnoverFilterAno" onchange="applyTurnoverFilters()" class="fx-select">
                         <option value="2026">Ano: 2026</option>
                     </select>
-                    <select id="turnoverFilterSetor" onchange="applyTurnoverFilters()" class="bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
+                    <select id="turnoverFilterSetor" onchange="applyTurnoverFilters()" class="fx-select">
                         <option value="ALL">Todos os Setores</option>
                     </select>
                     <button onclick="openTurnoverEntryModal()" title="Lançar ou atualizar movimentação mensal de um setor" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)] border border-purple-400/40 transition cursor-pointer">
@@ -1296,12 +776,12 @@
                 </div>
             </div>
 
-            <!-- Filters -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-4">
+            <!-- Filtros -->
+            <div class="faixa-rh" data-limpar="resetEmpregadosFilters" style="margin-top: 14px !important;">
                 <div class="lg:col-span-2">
                     <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Buscar Colaborador</label>
-                    <div class="relative">
-                        <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                    <div class="busca-faixa">
+                        <i data-lucide="search"></i>
                         <input type="text" id="empFilterSearch" oninput="applyEmpregadosFilters()" placeholder="Nome, função ou empresa..." class="w-full bg-[#070d1e] border border-cyan-500/30 rounded-xl pl-9 pr-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
                     </div>
                 </div>
@@ -1324,10 +804,6 @@
                 <button onclick="openAddColaboradorModal()" title="Adicionar novo colaborador" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-red-600 to-lube-red hover:from-red-500 hover:to-red-600 text-white shadow-neon-red transition cursor-pointer border border-red-400/40">
                     <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
                     <span>Adicionar Colaborador</span>
-                </button>
-                <button onclick="resetEmpregadosFilters()" title="Limpar filtros" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 border border-slate-700 hover:border-cyan-500/40 transition cursor-pointer">
-                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                    <span>Limpar Filtros</span>
                 </button>
                 <button onclick="exportColaboradoresExcel()" title="Exportar listagem para Excel estilizado (.xlsx)" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.35)] border border-emerald-400/40 transition cursor-pointer">
                     <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
@@ -1384,15 +860,17 @@
                     </div>
                 </div>
                 <div class="flex flex-wrap items-center gap-2.5">
-                    <select id="headFilterEmpresa" onchange="applyHeadFilters()" class="bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
+                    <div class="faixa-rh">
+                    <div><label>Empresa</label><select id="headFilterEmpresa" onchange="applyHeadFilters()" class="hidden">
                         <option value="ALL">Todas as Empresas</option>
-                    </select>
-                    <select id="headFilterSituacao" onchange="applyHeadFilters()" class="bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
+                    </select></div>
+                    <div><label>Situação</label><select id="headFilterSituacao" onchange="applyHeadFilters()" class="hidden">
                         <option value="ALL">Todas as Situações</option>
                         <option value="ABAIXO DO HEAD">Abaixo do Head (Contratar)</option>
                         <option value="ACIMA DO HEAD">Acima do Head (Avaliar Redução)</option>
                         <option value="HEAD ADEQUADO">Head Adequado</option>
-                    </select>
+                    </select></div>
+                    </div>
                     <button onclick="exportHeadExcel()" title="Exportar análise de HEAD para Excel" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.35)] border border-emerald-400/40 transition cursor-pointer">
                         <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
                         <span>Exportar Excel</span>
@@ -1564,12 +1042,12 @@
                 <input type="file" id="fileImportHoraExtra" accept=".xls, .xlsx, .xlsm, .csv" onchange="handleHoraExtraExcelImport(event)" class="hidden">
             </div>
 
-            <!-- Filters -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 pt-4 mt-4 border-t border-slate-800">
+            <!-- Filtros -->
+            <div class="faixa-rh faixa-separada" data-limpar="resetHoraExtraFilters" data-periodo="heFilterMesMulti">
                 <div class="lg:col-span-2">
                     <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Buscar Colaborador</label>
-                    <div class="relative">
-                        <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                    <div class="busca-faixa">
+                        <i data-lucide="search"></i>
                         <input type="text" id="heFilterSearch" oninput="applyHoraExtraFilters()" placeholder="Nome do colaborador..." class="w-full bg-[#070d1e] border border-cyan-500/30 rounded-xl pl-9 pr-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
                     </div>
                 </div>
@@ -1598,12 +1076,6 @@
                         <option value="50">Somente 50%</option>
                         <option value="100">Somente 100%</option>
                     </select>
-                </div>
-                <div>
-                    <button onclick="resetHoraExtraFilters()" title="Limpar filtros" class="w-full mt-5 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 border border-slate-700 hover:border-cyan-500/40 transition cursor-pointer">
-                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                        <span>Limpar Filtros</span>
-                    </button>
                 </div>
             </div>
         </div>
@@ -1761,17 +1233,16 @@
                 <span class="text-[11px] font-bold text-slate-400 uppercase flex items-center gap-1.5">
                     <i data-lucide="upload-cloud" class="w-3.5 h-3.5 text-blue-400"></i> Importar Relatório de Ponto (PontoMais)
                 </span>
-                <button id="btnInterjornadaImport" onclick="triggerInterjornadaImport()" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-blue-700 to-cyan-600 text-white shadow-neon-blue border border-cyan-400/40 transition cursor-pointer">
+                <button id="btnInterjornadaImport" onclick="triggerInterjornadaImport()" title="Relatório de Jornada do PontoMais. O período é lido de cada linha do relatório: pode reimportar o mesmo período quantas vezes precisar." class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-blue-700 to-cyan-600 text-white shadow-neon-blue border border-cyan-400/40 transition cursor-pointer">
                     <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
                     <span>Importar Planilha (.xlsx)</span>
                 </button>
-                <span class="text-[11px] text-slate-500">O período (datas) é lido automaticamente de cada linha do relatório &mdash; pode reimportar o mesmo período quantas vezes precisar.</span>
                 <input type="file" id="fileImportInterjornada" accept=".xls, .xlsx, .xlsm" onchange="handleInterjornadaExcelImport(event)" class="hidden">
             </div>
 
             <!-- Parametrização do Período de Apuração do Ponto -->
             <div class="mt-4 pt-4 border-t border-slate-800 flex flex-wrap items-center gap-2.5">
-                <span class="text-[11px] font-bold text-slate-400 uppercase flex items-center gap-1.5">
+                <span class="text-[11px] font-bold text-slate-400 uppercase flex items-center gap-1.5 cursor-help" title="Ex.: 21/12 a 20/01 = competência Janeiro; 21/01 a 20/02 = Fevereiro. O período leva o nome do mês em que fecha, seguindo o fechamento da folha de ponto, não o mês do calendário.">
                     <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-cyan-400"></i> Corte do Ponto
                 </span>
                 <div class="flex items-center gap-1.5">
@@ -1781,18 +1252,11 @@
                     <span id="ijDiaCorteFim" class="text-xs font-bold text-cyan-300">20</span>
                     <span class="text-[11px] text-slate-500">(do mês de competência)</span>
                 </div>
-                <span class="text-[11px] text-slate-500">Ex.: 21/12 a 20/01 = competência <b class="text-cyan-300">Janeiro</b>; 21/01 a 20/02 = <b class="text-cyan-300">Fevereiro</b> &mdash; o período leva o nome do mês em que <b class="text-cyan-300">fecha</b>, seguindo o fechamento real da folha de ponto, não o mês do calendário.</span>
             </div>
 
             <!-- Filters -->
-            <div id="ijFiltrosGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-4 mt-4 border-t border-slate-800">
+            <div id="ijFiltrosGrid" class="faixa-rh faixa-separada" data-limpar="resetInterjornadaFilters" data-periodo="ijMultiPeriodo">
                 <!-- Preenchido por renderFiltrosInterjornada(): todos são de múltipla escolha -->
-            </div>
-            <div class="flex justify-end pt-3">
-                <button onclick="resetInterjornadaFilters()" title="Limpar filtros" class="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 border border-slate-700 hover:border-cyan-500/40 transition cursor-pointer">
-                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                    <span>Limpar Filtros</span>
-                </button>
             </div>
         </div>
 
@@ -1959,7 +1423,7 @@
                     </div>
                 </div>
                 <div class="flex flex-wrap items-center gap-2.5">
-                    <button onclick="triggerExamesImport()" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-blue-700 to-cyan-600 hover:from-blue-600 hover:to-cyan-500 text-white shadow-neon-blue border border-cyan-400/40 transition cursor-pointer">
+                    <button onclick="triggerExamesImport()" title="A planilha precisa ter a aba Controle, com as colunas Nome do Funcionário, Função, Departamento, Último Exame, Tipo, Periodicidade e Próximo ASO. A situação é recalculada pela data de hoje, não pela coluna STATUS da planilha." class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-blue-700 to-cyan-600 hover:from-blue-600 hover:to-cyan-500 text-white shadow-neon-blue border border-cyan-400/40 transition cursor-pointer">
                         <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
                         <span>Importar Planilha</span>
                     </button>
@@ -1971,17 +1435,13 @@
                 </div>
             </div>
 
-            <p class="text-[11px] text-slate-500 flex items-center gap-1.5">
-                <i data-lucide="info" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
-                A planilha precisa ter a aba <b class="text-cyan-300">Controle</b>, com as colunas Nome do Funcionário, Função, Departamento, Último Exame, Tipo, Periodicidade e Próximo ASO. A situação é recalculada aqui pela data de hoje &mdash; não depende da coluna STATUS da planilha, que envelhece.
-            </p>
 
             <!-- Filtros -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 pt-4 border-t border-slate-800">
+            <div class="faixa-rh faixa-separada" data-limpar="resetExamesFilters">
                 <div class="lg:col-span-2">
                     <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Buscar Colaborador</label>
-                    <div class="relative">
-                        <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                    <div class="busca-faixa">
+                        <i data-lucide="search"></i>
                         <input type="text" id="exFilterSearch" oninput="applyExamesFilters()" placeholder="Nome, função ou departamento..." class="w-full bg-[#070d1e] border border-cyan-500/30 rounded-xl pl-9 pr-3 py-2 text-xs font-medium text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition shadow-inner">
                     </div>
                 </div>
@@ -2023,10 +1483,6 @@
                     <button onclick="atalhoExames('A_VENCER')" class="px-3 py-1.5 text-[11px] font-bold rounded-xl bg-amber-950/80 text-amber-300 border border-amber-500/40 hover:bg-amber-900/80 transition cursor-pointer">Vencem em 90 dias</button>
                     <button onclick="atalhoExames('SEM_REGISTRO')" class="px-3 py-1.5 text-[11px] font-bold rounded-xl bg-slate-800/80 text-slate-300 border border-slate-600 hover:bg-slate-700/80 transition cursor-pointer">Sem exame</button>
                 </div>
-                <button onclick="resetExamesFilters()" title="Limpar filtros" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 border border-slate-700 hover:border-cyan-500/40 transition cursor-pointer">
-                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                    <span>Limpar Filtros</span>
-                </button>
             </div>
         </div>
 
@@ -2932,7 +2388,156 @@
             Chart.defaults.set('plugins.datalabels', { display: false });
         }
 
-        const DL_FONT_FAMILY = '"Plus Jakarta Sans", "Inter", sans-serif';
+        // ================== GRÁFICOS NO TEMA DA LUBE ==================
+        // Os 28 gráficos foram escritos com as cores do painel antigo (ciano neon,
+        // vermelho, âmbar, roxo). Em vez de trocar cor por cor, este plugin lê cada cor
+        // quando o gráfico nasce (e a cada atualização) e devolve o token do tema:
+        // estado continua estado (verde, âmbar, vermelho), o ciano antigo vira o azul da
+        // marca, cinza de texto vira o texto do tema e a grade fica discreta. Tooltip em
+        // cartão, como nos outros painéis. Lê os tokens na hora: trocar o tema refaz.
+        const FONTE_TXT = '"IBM Plex Sans", "Segoe UI", system-ui, sans-serif';
+        const FONTE_NUM = '"JetBrains Mono", "Cascadia Mono", Consolas, monospace';
+        const FONTE_TIT = '"Archivo", "Segoe UI", system-ui, sans-serif';
+
+        const temaGraficos = (() => {
+            const saidas = new Set();
+            const token = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+            function ler(c) {
+                if (typeof c !== 'string') return null;
+                const t = c.trim();
+                let m = t.match(/^#([0-9a-f]{6})([0-9a-f]{2})?$/i);   // #rrggbb ou #rrggbbaa
+                if (m) { const n = parseInt(m[1], 16); return { r: n >> 16, g: (n >> 8) & 255, b: n & 255, a: m[2] ? parseInt(m[2], 16) / 255 : 1 }; }
+                m = t.match(/^#([0-9a-f]{3})$/i);
+                if (m) { const [r, g, b] = m[1].split('').map(x => parseInt(x + x, 16)); return { r, g, b, a: 1 }; }
+                m = t.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/i);
+                if (m) return { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : +m[4] };
+                return null;
+            }
+            function hsl({ r, g, b }) {
+                r /= 255; g /= 255; b /= 255;
+                const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+                let h = 0, s = 0;
+                if (mx !== mn) {
+                    const d = mx - mn;
+                    s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+                    h = (mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60;
+                }
+                return { h, s, l, croma: mx - mn };
+            }
+            function familia(c) {
+                // Croma (quanto de cor há), não saturação: o cinza-azulado do Tailwind (#94a3b8)
+                // tem saturação de 20% mas quase nenhuma cor, e é cinza de texto.
+                const { h, l, croma } = hsl(c);
+                if (croma < 0.22 || l < 0.08) return l > 0.88 ? 'branco' : l < 0.2 ? 'fundo' : 'neutro';
+                if (l > 0.94) return 'branco';
+                if (h < 15 || h >= 340) return 'perigo';
+                if (h < 65) return 'atencao';
+                if (h < 170) return 'ok';
+                if (h < 205) return 'azul';
+                if (h < 250) return 'info';
+                if (h < 300) return 'violeta';
+                return 'rosa';
+            }
+            const TOKEN = { perigo: '--perigo', atencao: '--atencao', ok: '--ok', azul: '--d1', info: '--info', violeta: '--d3', rosa: '--d5' };
+            function comAlfa(cor, a) {
+                const c = ler(cor);
+                return (!c || a >= 1) ? cor : `rgba(${c.r}, ${c.g}, ${c.b}, ${a})`;
+            }
+            function mapear(valor, uso) {
+                if (Array.isArray(valor)) return valor.map(v => mapear(v, uso));
+                if (typeof valor !== 'string' || saidas.has(valor)) return valor;
+                const c = ler(valor);
+                if (!c || c.a === 0) return valor;
+                let novo;
+                const fam = familia(c);
+                if (uso === 'grade') novo = token('--grade');
+                else if (fam === 'branco') novo = uso === 'borda' ? token('--s1') : valor;
+                else if (fam === 'fundo') novo = uso === 'borda' ? token('--s1') : uso === 'texto' ? valor : token('--s2');
+                else if (fam === 'neutro') novo = uso === 'texto' ? token('--t3') : uso === 'borda' ? token('--linha-2') : token('--d8');
+                // Preenchimento translúcido (área sob a linha) mantém a transparência; o resto é sólido.
+                else novo = comAlfa(token(TOKEN[fam]), c.a < 0.5 ? c.a : 1);
+                if (!novo) return valor;
+                saidas.add(novo);
+                return novo;
+            }
+            function tratarRotulos(dl) {
+                if (!dl || typeof dl !== 'object') return;
+                if (typeof dl.color === 'string' || Array.isArray(dl.color)) dl.color = mapear(dl.color, 'texto');
+                else if (typeof dl.color === 'function' && !dl.color.__tema) {
+                    const f = dl.color;
+                    dl.color = (ctx) => mapear(f(ctx), 'texto');
+                    dl.color.__tema = true;
+                }
+                if (typeof dl.backgroundColor === 'string') dl.backgroundColor = mapear(dl.backgroundColor, 'fill');
+            }
+            function tratarDataset(ds) {
+                ['backgroundColor', 'hoverBackgroundColor', 'pointBackgroundColor', 'pointHoverBackgroundColor']
+                    .forEach(k => { if (k in ds) ds[k] = mapear(ds[k], 'fill'); });
+                ['borderColor', 'hoverBorderColor', 'pointBorderColor', 'pointHoverBorderColor']
+                    .forEach(k => { if (k in ds) ds[k] = mapear(ds[k], 'borda'); });
+                if (ds.datalabels) tratarRotulos(ds.datalabels);
+            }
+            function tratarOpcoes(o) {
+                if (!o) return;
+                Object.values(o.scales || {}).forEach(sc => {
+                    if (!sc || typeof sc !== 'object') return;
+                    if (sc.ticks && typeof sc.ticks.color === 'string') sc.ticks.color = mapear(sc.ticks.color, 'texto');
+                    if (sc.ticks && sc.ticks.font && typeof sc.ticks.font === 'object') sc.ticks.font.family = FONTE_TXT;
+                    if (sc.grid && typeof sc.grid.color === 'string') sc.grid.color = mapear(sc.grid.color, 'grade');
+                    if (sc.title && typeof sc.title.color === 'string') sc.title.color = mapear(sc.title.color, 'texto');
+                    if (sc.pointLabels && typeof sc.pointLabels.color === 'string') sc.pointLabels.color = token('--t2');
+                    if (sc.angleLines && typeof sc.angleLines.color === 'string') sc.angleLines.color = token('--grade');
+                    sc.border = Object.assign({}, sc.border, { color: token('--linha-2') });
+                });
+                const pl = o.plugins || (o.plugins = {});
+                if (pl.legend && pl.legend.labels) {
+                    if (typeof pl.legend.labels.color === 'string') {
+                        // Legenda um tom acima do eixo: é texto de leitura, não de régua.
+                        const cor = mapear(pl.legend.labels.color, 'texto');
+                        pl.legend.labels.color = cor === token('--t3') ? token('--t2') : cor;
+                        saidas.add(pl.legend.labels.color);
+                    }
+                    if (pl.legend.labels.font && typeof pl.legend.labels.font === 'object') pl.legend.labels.font.family = FONTE_TXT;
+                }
+                const tt = pl.tooltip || (pl.tooltip = {});
+                Object.assign(tt, {
+                    backgroundColor: token('--s-sobe'), borderColor: token('--linha-2'), borderWidth: 1,
+                    titleColor: token('--ouro-forte'), bodyColor: token('--t1'), footerColor: token('--t3'),
+                    padding: 10, cornerRadius: 12, boxPadding: 4, caretSize: 6,
+                    titleFont: { family: FONTE_TIT, weight: '800', size: 12.5 },
+                    bodyFont: { family: FONTE_TXT, weight: '600', size: 12 },
+                    footerFont: { family: FONTE_TXT, weight: '600', size: 11 }
+                });
+                if (pl.datalabels) tratarRotulos(pl.datalabels);
+            }
+            function tratar(chart) {
+                const cfg = chart.config;
+                ((cfg.data && cfg.data.datasets) || []).forEach(tratarDataset);
+                tratarOpcoes(cfg.options);
+            }
+            return {
+                id: 'temaLube',
+                marcar(cor) { saidas.add(cor); },
+                beforeInit(chart) {
+                    Chart.defaults.color = token('--t3');
+                    Chart.defaults.borderColor = token('--grade');
+                    Chart.defaults.font.family = FONTE_TXT;
+                    tratar(chart);
+                },
+                beforeUpdate(chart) { tratar(chart); }
+            };
+        })();
+        if (window.Chart) Chart.register(temaGraficos);
+
+        // Paleta de DADO (séries que são categorias: empresas, setores). Cor de estado
+        // (verde/âmbar/vermelho) fica para o que é bom/atenção/ruim. Validada contra --s1.
+        function corDadoGrafico(i) {
+            const cor = getComputedStyle(document.documentElement).getPropertyValue(['--d1', '--d2', '--d3', '--d4', '--d5', '--d9', '--d6', '--d7', '--d8'][i % 9]).trim();
+            temaGraficos.marcar(cor);
+            return cor;
+        }
+
+        const DL_FONT_FAMILY = FONTE_NUM;
 
         function fmtNumBR(valor, casas = 0) {
             const n = Number(valor);
@@ -3139,6 +2744,9 @@
                 const ds = chart.data.datasets[0] || { data: [] };
                 const cores = Array.isArray(ds.backgroundColor) ? ds.backgroundColor : [];
                 const total = (ds.data || []).reduce((s, v) => s + (Number(v) || 0), 0);
+                // Sem fontColor o Chart.js escreve com a última cor usada no canvas (saía escuro no tema escuro).
+                const corTexto = (chart.options.plugins && chart.options.plugins.legend && chart.options.plugins.legend.labels && chart.options.plugins.legend.labels.color)
+                    || getComputedStyle(document.documentElement).getPropertyValue('--t2').trim();
                 return (chart.data.labels || []).map((rotulo, i) => {
                     const valor = Number(ds.data[i]) || 0;
                     const pct = total ? valor / total * 100 : 0;
@@ -3147,6 +2755,7 @@
                         fillStyle: cores[i] || ds.backgroundColor,
                         strokeStyle: cores[i] || ds.backgroundColor,
                         lineWidth: 0,
+                        fontColor: corTexto,
                         hidden: !chart.getDataVisibility(i),
                         index: i
                     };
@@ -3940,10 +3549,9 @@
         function updateFilterBadge() {
             const total = rawData.length;
             const current = filteredData.length;
-            const pct = total > 0 ? ((current / total) * 100).toFixed(1) : 0;
-            document.getElementById('filteredStatsBadge').innerHTML = `
-                Mostrando <strong class="text-blue-600 dark:text-blue-400 font-extrabold">${current}</strong> de ${total} registros (${pct}%)
-            `;
+            const pct = total > 0 ? (current / total) * 100 : 0;
+            document.getElementById('filteredStatsBadge').innerHTML =
+                `Mostrando <strong>${fmtIntBR(current)}</strong> de ${fmtIntBR(total)} registros (${fmtPctBR(pct)})`;
         }
 
         // Previous KPI Values for Smooth Continuous CountUp
@@ -4203,12 +3811,9 @@
                 const b = parseInt(h.substring(4, 6), 16);
                 return [r, g, b];
             };
-            const [r, g, b] = hex2rgb(baseColor);
-            const grad = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
-            grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha1})`);
-            grad.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${alpha1 * 0.85})`);
-            grad.addColorStop(1, `rgba(${Math.max(0, r-40)}, ${Math.max(0, g-40)}, ${Math.max(0, b-40)}, ${alpha2})`);
-            return grad;
+            // Cor sólida, sem o degradê "3D" de antes (padrão da casa: nada de gráfico "vidro").
+            // A cor passa pelo plugin temaGraficos, que a troca pelo token do tema.
+            return baseColor;
         }
 
         // 1. Chart: Evolução Mensal Empilhada com Gradientes 3D
@@ -4250,7 +3855,7 @@
             const gradFolga = make3DGradient(ctx, '#f59e0b', 0.9, 0.50);
             const gradTreina = make3DGradient(ctx, '#10b981', 0.9, 0.50);
 
-            const fontFamily = '"Plus Jakarta Sans", "Inter", sans-serif';
+            const fontFamily = FONTE_TXT;
 
             chartEvolution = new Chart(ctx, {
                 type: 'bar',
@@ -4398,7 +4003,7 @@
             const data = top5.map(d => d[1]);
             const colors = ['#e30613', '#00d4ff', '#f59e0b', '#10b981', '#a855f7', '#64748b'];
             const hovers = ['#ff3344', '#38bdf8', '#fbbf24', '#34d399', '#c084fc', '#94a3b8'];
-            const fontFamily = '"Plus Jakarta Sans", "Inter", sans-serif';
+            const fontFamily = FONTE_TXT;
 
             chartMotivos = new Chart(ctx, {
                 type: 'doughnut',
@@ -4457,13 +4062,10 @@
             const sorted = Object.entries(setorCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
             const labels = sorted.map(d => d[0]);
             const data = sorted.map(d => d[1]);
-            const fontFamily = '"Plus Jakarta Sans", "Inter", sans-serif';
+            const fontFamily = FONTE_TXT;
 
             // Horizontal gradient (left=bright, right=dim)
-            const horizGrad = ctx.createLinearGradient(ctx.canvas.width, 0, 0, 0);
-            horizGrad.addColorStop(0, 'rgba(0, 212, 255, 0.9)');
-            horizGrad.addColorStop(0.5, 'rgba(0, 180, 220, 0.75)');
-            horizGrad.addColorStop(1, 'rgba(0, 100, 160, 0.45)');
+            const horizGrad = '#00d4ff';   // cor sólida; o tema troca pelo azul da marca
 
             chartSetor = new Chart(ctx, {
                 type: 'bar',
@@ -4528,7 +4130,7 @@
                     : 'text-xs font-bold text-amber-400 bg-amber-950/80 px-2.5 py-1 rounded-full border border-amber-500/50';
             }
 
-            const fontFamily = '"Plus Jakarta Sans", "Inter", sans-serif';
+            const fontFamily = FONTE_TXT;
 
             // Create per-bar 3D gradients
             const gradients = data.map((_, i) => {
@@ -4608,12 +4210,9 @@
                 return `#${index + 1} ${rawName}`;
             });
             const data = sorted.map(d => d[1]);
-            const fontFamily = '"Plus Jakarta Sans", "Inter", sans-serif';
+            const fontFamily = FONTE_TXT;
 
-            const horizGradRed = ctx.createLinearGradient(ctx.canvas.width, 0, 0, 0);
-            horizGradRed.addColorStop(0, 'rgba(227, 6, 19, 0.95)');
-            horizGradRed.addColorStop(0.5, 'rgba(200, 5, 15, 0.75)');
-            horizGradRed.addColorStop(1, 'rgba(120, 3, 10, 0.45)');
+            const horizGradRed = '#e30613';   // cor sólida; o tema troca pelo vermelho de alerta
 
             chartTopInjustificadas = new Chart(ctx, {
                 type: 'bar',
@@ -4669,7 +4268,7 @@
                 return `#${index + 1} ${rawName}`;
             });
             const data = sorted.map(d => d[1]);
-            const fontFamily = '"Plus Jakarta Sans", "Inter", sans-serif';
+            const fontFamily = FONTE_TXT;
 
             const horizGradBlue = ctx.createLinearGradient(ctx.canvas.width, 0, 0, 0);
             horizGradBlue.addColorStop(0, 'rgba(59, 130, 246, 0.95)');
@@ -4729,7 +4328,7 @@
                 else if (tc >= 5) maisDe5++;
             });
 
-            const fontFamily = '"Plus Jakarta Sans", "Inter", sans-serif';
+            const fontFamily = FONTE_TXT;
 
             chartTempoCasa = new Chart(ctx, {
                 type: 'doughnut',
@@ -5555,13 +5154,13 @@
         }
 
         const SECTION_META = {
-            absenteismo: { title: 'BI DE ABSENTEÍSMO RH', subtitle: "KPI's - indicador de perfomace" },
-            turnover: { title: 'TURNOVER RH', subtitle: 'Controle de entrada e saída de funcionários' },
-            empregados: { title: 'LISTAGEM DE EMPREGADOS', subtitle: 'Cadastro e busca dinâmica de colaboradores' },
-            head: { title: 'PAINEL HEAD', subtitle: 'Necessidade de contratação e redução por função' },
-            horaextra: { title: 'PAGAMENTO HORA EXTRA', subtitle: 'Análise de horas extras 50% e 100% por colaborador e período' },
-            interjornada: { title: 'INTERJORNADAS', subtitle: 'Controle do intervalo mínimo de 11h de descanso entre jornadas — motoristas e ajudantes' },
-            exames: { title: 'EXAMES PERIÓDICOS', subtitle: 'Controle de vencimento do ASO por colaborador' }
+            absenteismo: { grupo: 'Ausências e jornada', title: 'Absenteísmo', subtitle: 'Faltas, atestados, folgas e capacitações por período de ponto' },
+            interjornada: { grupo: 'Ausências e jornada', title: 'InterJornadas', subtitle: 'Descanso mínimo de 11h entre jornadas — motoristas e ajudantes' },
+            horaextra: { grupo: 'Ausências e jornada', title: 'Pagamento de Hora Extra', subtitle: 'Horas extras 50% e 100% por colaborador e período' },
+            empregados: { grupo: 'Quadro de pessoal', title: 'Empregados', subtitle: 'Cadastro de colaboradores' },
+            head: { grupo: 'Quadro de pessoal', title: 'Painel HEAD', subtitle: 'Necessidade de contratação e redução por função' },
+            turnover: { grupo: 'Quadro de pessoal', title: 'Turnover', subtitle: 'Entradas e saídas de funcionários' },
+            exames: { grupo: 'Saúde ocupacional', title: 'Exames Periódicos', subtitle: 'Vencimento do ASO por colaborador' }
         };
 
         function switchSection(name) {
@@ -5577,6 +5176,9 @@
             if (meta) {
                 document.getElementById('sectionTitleMain').textContent = meta.title;
                 document.getElementById('sectionSubtitleMain').textContent = meta.subtitle;
+                const olho = document.getElementById('sectionEyebrow');
+                if (olho) olho.textContent = `Gestão RH · ${meta.grupo}`;
+                document.title = `${meta.title} — Gestão RH | Lube Distribuidora`;
             }
 
             const absActions = document.getElementById('absenteismoHeaderActions');
@@ -5591,6 +5193,7 @@
 
             closeSidebarMobile();
             safeCreateIcons();
+            agendarAjusteKpi();
         }
 
         // ================================================================
@@ -5744,8 +5347,8 @@
                     const row = allYearRows.find(r => r.setor === s && r.ano_mes_sort === m);
                     return row && row.turnover_pct !== null ? +row.turnover_pct.toFixed(1) : null;
                 }),
-                backgroundColor: palette[i % palette.length] + 'cc',
-                hoverBackgroundColor: palette[i % palette.length],
+                backgroundColor: corDadoGrafico(i),
+                hoverBackgroundColor: corDadoGrafico(i),
                 borderRadius: { topLeft: 4, topRight: 4 },
                 borderSkipped: false
             }));
@@ -6129,6 +5732,8 @@
             funcaoSel.innerHTML = '<option value="ALL">Todas as Funções</option>' + funcoes.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
             if (empresas.includes(curEmpresa)) empresaSel.value = curEmpresa;
             if (funcoes.includes(curFuncao)) funcaoSel.value = curFuncao;
+            ativarMultiNoSelect('empFilterEmpresa', 'Todas as Empresas', applyEmpregadosFilters);
+            ativarMultiNoSelect('empFilterFuncao', 'Todas as Funções', applyEmpregadosFilters);
         }
 
         function populateColaboradorFormDatalists() {
@@ -6144,12 +5749,9 @@
             // Demitido sai da listagem (continua no banco, para o histórico não ficar órfão).
             colaboradoresRawData = (colaboradoresRawData || []).filter(c => String(c.status || '').toUpperCase() !== STATUS_DEMITIDO);
             const search = (document.getElementById('empFilterSearch').value || '').trim().toLowerCase();
-            const empresa = document.getElementById('empFilterEmpresa').value;
-            const funcao = document.getElementById('empFilterFuncao').value;
-
             colaboradoresFilteredData = colaboradoresRawData.filter(c => {
-                if (empresa !== 'ALL' && c.empresa !== empresa) return false;
-                if (funcao !== 'ALL' && c.funcao !== funcao) return false;
+                if (!multiDoSelect('empFilterEmpresa', c.empresa)) return false;
+                if (!multiDoSelect('empFilterFuncao', c.funcao)) return false;
                 if (search) {
                     const matchNome = (c.nome || '').toLowerCase().includes(search);
                     const matchFuncao = (c.funcao || '').toLowerCase().includes(search);
@@ -6170,6 +5772,7 @@
             document.getElementById('empFilterSearch').value = '';
             document.getElementById('empFilterEmpresa').value = 'ALL';
             document.getElementById('empFilterFuncao').value = 'ALL';
+            limparMultisDeSelects(['empFilterEmpresa', 'empFilterFuncao']);
             applyEmpregadosFilters();
         }
 
@@ -7026,11 +6629,11 @@
             const medio = colaboradores > 0 ? totalValor / colaboradores : 0;
 
             document.getElementById('heKpiValor50').textContent = formatCurrencyBRL(valor50);
-            document.getElementById('heKpiHoras50').textContent = `${horas50.toFixed(1)}h no período`;
+            document.getElementById('heKpiHoras50').textContent = `${fmtNumBR(horas50, 1)}h no período`;
             document.getElementById('heKpiValor100').textContent = formatCurrencyBRL(valor100);
-            document.getElementById('heKpiHoras100').textContent = `${horas100.toFixed(1)}h no período (feriados)`;
+            document.getElementById('heKpiHoras100').textContent = `${fmtNumBR(horas100, 1)}h no período (feriados)`;
             document.getElementById('heKpiValorTotal').textContent = formatCurrencyBRL(totalValor);
-            document.getElementById('heKpiHorasTotal').textContent = `${totalHoras.toFixed(1)}h`;
+            document.getElementById('heKpiHorasTotal').textContent = `${fmtNumBR(totalHoras, 1)}h`;
             document.getElementById('heKpiColaboradores').textContent = colaboradores.toLocaleString('pt-BR');
             document.getElementById('heKpiMedioColaborador').textContent = formatCurrencyBRL(medio);
         }
@@ -7209,7 +6812,7 @@
                         <td class="py-2 pr-4 text-slate-400">${escapeHtml(c.departamento || '—')}</td>
                         <td class="py-2 pr-4 text-slate-400">${escapeHtml(c.funcao || '—')}</td>
                         <td class="py-2 pr-4 text-right text-purple-300 font-bold">${c.meses.size}</td>
-                        <td class="py-2 pr-4 text-right text-cyan-300">${c.horas.toFixed(1)}h</td>
+                        <td class="py-2 pr-4 text-right text-cyan-300">${fmtNumBR(c.horas, 1)}h</td>
                         <td class="py-2 pr-4 text-right font-bold text-blue-300">${formatCurrencyBRL(c.valor)}</td>
                         <td class="py-2 pr-4 text-center">
                             <button onclick="openHoraExtraFicha('${String(c.codigo).replace(/'/g, "\\'")}')" class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-lube-navy dark:bg-slate-800 text-white hover:bg-lube-red transition shadow-sm" title="Ver ficha completa de hora extra do colaborador">
@@ -7246,7 +6849,7 @@
             const media = meses.length > 0 ? totalValor / meses.length : 0;
 
             document.getElementById('heFichaTotalPago').textContent = formatCurrencyBRL(totalValor);
-            document.getElementById('heFichaTotalHoras').textContent = `${totalHoras.toFixed(1)}h`;
+            document.getElementById('heFichaTotalHoras').textContent = `${fmtNumBR(totalHoras, 1)}h`;
             document.getElementById('heFichaMeses').textContent = meses.length;
             document.getElementById('heFichaMedia').textContent = formatCurrencyBRL(media);
 
@@ -7501,15 +7104,22 @@
         // ================================================================
         // FILTRO DE MÚLTIPLA ESCOLHA (padrão de navegação dos BIs da Lube)
         // ================================================================
-        // Contrato, igual ao dos outros painéis: a partir de "Todas", o clique
-        // seleciona só aquela opção; depois cada clique soma ou tira; esvaziar
-        // volta para "Todas". Conjunto vazio = tudo, então nenhum filtro começa
-        // escondendo dado.
+        // Mesmo desenho e mecânica dos sistemas atuais (Gestão Comercial Trade,
+        // Movimentação de Inventário, Gestão Fiscal): uma faixa com o rótulo FILTROS,
+        // um botão por dimensão com a contagem do que está marcado, popover com busca
+        // (o trecho achado fica destacado), pílulas dos filtros ativos com "x" e
+        // "Limpar filtros". Nas telas com período de ponto, atalhos de período.
         //
-        // O mesmo componente serve para lista curta (situação, empresa) e para
-        // lista longa (78 colaboradores): acima de 10 opções aparece uma busca.
+        // Contrato: a partir de "Todas", o clique seleciona só aquela opção; depois
+        // cada clique soma ou tira; esvaziar volta para "Todas". Conjunto vazio = tudo,
+        // então nenhum filtro começa escondendo dado.
         const multiEstado = {};   // id -> Set de valores escolhidos
         const multiConfig = {};   // id -> { opcoes, rotuloTodos, aoMudar }
+        const multiNome = {};     // id -> nome da dimensão (botão e pílula)
+
+        const SVG_BAIXO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+        const SVG_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+        const SVG_FILTRO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z"/></svg>';
 
         function registrarFiltroMulti(id, opcoes, rotuloTodos, aoMudar) {
             const anterior = multiEstado[id];
@@ -7535,23 +7145,32 @@
             return !!s && s.size > 0;
         }
 
+        function avisarMudancaMulti(id) {
+            const cfg = multiConfig[id];
+            if (cfg && typeof cfg.aoMudar === 'function') cfg.aoMudar();
+        }
+
         function alternarFiltroMulti(id, valor) {
             const s = multiEstado[id] || (multiEstado[id] = new Set());
             if (s.has(valor)) s.delete(valor); else s.add(valor);
             renderFiltroMulti(id);
-            const cfg = multiConfig[id];
-            if (cfg && typeof cfg.aoMudar === 'function') cfg.aoMudar();
+            avisarMudancaMulti(id);
+        }
+
+        // Pelo índice da opção: evita colocar o valor (com aspas, barras...) dentro do onclick.
+        function alternarFiltroMultiIdx(id, i) {
+            const o = ((multiConfig[id] || {}).opcoes || [])[i];
+            if (o) alternarFiltroMulti(id, o.valor);
         }
 
         function limparFiltroMulti(id, disparar = true) {
             multiEstado[id] = new Set();
             renderFiltroMulti(id);
-            const cfg = multiConfig[id];
-            if (disparar && cfg && typeof cfg.aoMudar === 'function') cfg.aoMudar();
+            if (disparar) avisarMudancaMulti(id);
         }
 
         function resumoFiltroMulti(id) {
-            const cfg = multiConfig[id] || {};
+            const cfg = multiConfig[id] || { opcoes: [] };
             const s = multiEstado[id] || new Set();
             if (s.size === 0) return cfg.rotuloTodos || 'Todos';
             if (s.size === 1) {
@@ -7561,37 +7180,84 @@
             return `${s.size} selecionados`;
         }
 
-        function renderFiltroMulti(id) {
-            const botao = document.getElementById(`${id}-resumo`);
-            if (botao) botao.textContent = resumoFiltroMulti(id);
+        // Busca sem acento e sem caixa; vários termos precisam aparecer todos.
+        function normBusca(t) {
+            return String(t == null ? '' : t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        }
+        function termosDaBusca(id) {
+            return normBusca(document.getElementById(`${id}-busca`)?.value).split(/\s+/).filter(Boolean);
+        }
+        function destacarBusca(texto, termos) {
+            const bruto = String(texto == null ? '' : texto);
+            if (!termos.length) return escapeHtml(bruto);
+            const n = normBusca(bruto);
+            const marcas = [];
+            termos.forEach(t => { const i = n.indexOf(t); if (i >= 0) marcas.push([i, i + t.length]); });
+            marcas.sort((a, b) => a[0] - b[0]);
+            let out = '', pos = 0;
+            marcas.forEach(([a, b]) => {
+                if (a < pos) return;
+                out += escapeHtml(bruto.slice(pos, a)) + '<mark>' + escapeHtml(bruto.slice(a, b)) + '</mark>';
+                pos = b;
+            });
+            return out + escapeHtml(bruto.slice(pos));
+        }
 
+        function renderFiltroMulti(id) {
+            const cfg = multiConfig[id] || { opcoes: [] };
+            const s = multiEstado[id] || new Set();
+
+            const botao = document.getElementById(`${id}-botao`);
+            if (botao) {
+                botao.classList.toggle('on', s.size > 0);
+                botao.title = `${multiNome[id] || ''}: ${resumoFiltroMulti(id)}`;
+            }
             const marca = document.getElementById(`${id}-marca`);
-            if (marca) marca.classList.toggle('hidden', !multiEstaFiltrado(id));
+            if (marca) { marca.hidden = s.size === 0; marca.textContent = s.size; }
+
+            atualizarFaixaDoFiltro(id);
 
             const lista = document.getElementById(`${id}-lista`);
             if (!lista) return;
-            const cfg = multiConfig[id] || { opcoes: [] };
-            const busca = (document.getElementById(`${id}-busca`)?.value || '').trim().toUpperCase();
-            const s = multiEstado[id] || new Set();
+            // Acima de 10 opções aparece a busca (78 colaboradores na InterJornadas).
+            const topo = document.getElementById(`${id}-topo`);
+            if (topo) topo.style.display = cfg.opcoes.length > 10 ? '' : 'none';
 
-            const visiveis = cfg.opcoes.filter(o => !busca || String(o.rotulo).toUpperCase().includes(busca));
-            if (visiveis.length === 0) {
-                lista.innerHTML = '<div class="px-3 py-4 text-center text-[11px] text-slate-500">Nada encontrado.</div>';
-                return;
+            const termos = termosDaBusca(id);
+            const achados = termos.length
+                ? cfg.opcoes.filter(o => { const n = normBusca(o.rotulo); return termos.every(t => n.includes(t)); })
+                : cfg.opcoes;
+            // Marcados primeiro, como nos outros painéis: o que está valendo fica à vista.
+            const ordem = achados.filter(o => s.has(o.valor)).concat(achados.filter(o => !s.has(o.valor)));
+            lista.innerHTML = ordem.length ? ordem.map(o => {
+                const i = cfg.opcoes.indexOf(o);
+                return `<button type="button" class="pop-item${s.has(o.valor) ? ' on' : ''}" onclick="alternarFiltroMultiIdx('${id}', ${i})">
+                    <span class="cx"></span><span class="tx" title="${escapeHtml(o.rotulo)}">${destacarBusca(o.rotulo, termos)}</span></button>`;
+            }).join('') : '<div class="pop-vazio">Nada encontrado</div>';
+
+            const cont = document.getElementById(`${id}-contagem`);
+            if (cont) cont.textContent = s.size ? `${s.size} selecionado${s.size > 1 ? 's' : ''}` : (cfg.rotuloTodos || 'Todos');
+            const marcar = document.getElementById(`${id}-marcar`);
+            if (marcar) {
+                const pode = termos.length > 0 && achados.length > 1 && achados.length <= 300;
+                marcar.hidden = !pode;
+                marcar.textContent = `Marcar os ${achados.length}`;
             }
-            lista.innerHTML = visiveis.map(o => {
-                const marcado = s.has(o.valor);
-                return `<button type="button" onclick="alternarFiltroMulti('${id}', ${JSON.stringify(o.valor).replace(/"/g, '&quot;')})"
-                    class="w-full flex items-center gap-2 px-3 py-1.5 text-left text-[11px] font-medium transition cursor-pointer ${marcado ? 'bg-cyan-950/60 text-cyan-200' : 'text-slate-300 hover:bg-slate-800/70'}">
-                    <span class="w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${marcado ? 'bg-cyan-500 border-cyan-400 text-[#070d1e]' : 'border-slate-600'}">${marcado ? '&check;' : ''}</span>
-                    <span class="truncate">${escapeHtml(o.rotulo)}</span>
-                </button>`;
-            }).join('');
+        }
+
+        // "Marcar os N" da busca: soma todos os achados de uma vez.
+        function marcarAchadosMulti(id) {
+            const cfg = multiConfig[id] || { opcoes: [] };
+            const termos = termosDaBusca(id);
+            const s = multiEstado[id] || (multiEstado[id] = new Set());
+            cfg.opcoes.forEach(o => { const n = normBusca(o.rotulo); if (termos.every(t => n.includes(t))) s.add(o.valor); });
+            renderFiltroMulti(id);
+            avisarMudancaMulti(id);
         }
 
         // O painel abre "solto" na página (vai para o <body>, position: fixed), ancorado
-        // no botão. Dentro do card ele era cortado pela borda (overflow do card), e o
-        // RH via só a primeira linha da lista. Ao fechar, volta para o lugar de origem.
+        // no botão. Dentro do card ele era cortado pela borda (overflow do card). Ao
+        // fechar, volta para o lugar de origem.
         function fecharPaineisMulti() {
             document.querySelectorAll('[data-painel-multi]').forEach(p => {
                 p.classList.add('hidden');
@@ -7606,23 +7272,24 @@
             if (!painel || !botao || painel.classList.contains('hidden')) return;
             const r = botao.getBoundingClientRect();
             const margem = 8;
-            const largura = Math.min(Math.max(r.width, 260), window.innerWidth - margem * 2);
+            const largura = Math.min(320, window.innerWidth - margem * 2);
             const esquerda = Math.max(margem, Math.min(r.left, window.innerWidth - largura - margem));
             painel.style.width = largura + 'px';
             painel.style.left = esquerda + 'px';
 
             // Cabe embaixo? Senão abre para cima; a lista encolhe para caber na tela.
             const lista = document.getElementById(`${id}-lista`);
-            if (lista) lista.style.maxHeight = '256px';
+            if (lista) lista.style.maxHeight = '300px';
+            painel.style.maxHeight = 'none';
             const abaixo = window.innerHeight - r.bottom - margem;
             const acima = r.top - margem;
             const paraCima = painel.offsetHeight > abaixo && acima > abaixo;
             const espaco = paraCima ? acima : abaixo;
             if (lista && painel.offsetHeight > espaco) {
                 const resto = painel.offsetHeight - lista.offsetHeight;
-                lista.style.maxHeight = Math.max(96, espaco - resto - 4) + 'px';
+                lista.style.maxHeight = Math.max(96, espaco - resto - 6) + 'px';
             }
-            painel.style.top = (paraCima ? Math.max(margem, r.top - 4 - painel.offsetHeight) : r.bottom + 4) + 'px';
+            painel.style.top = (paraCima ? Math.max(margem, r.top - 6 - painel.offsetHeight) : r.bottom + 6) + 'px';
         }
 
         function alternarPainelMulti(id) {
@@ -7634,11 +7301,12 @@
             if (abrindo) {
                 if (!painel._casa) painel._casa = painel.parentElement;
                 document.body.appendChild(painel);
+                const busca = document.getElementById(`${id}-busca`);
+                if (busca) busca.value = '';
                 painel.classList.remove('hidden');
                 renderFiltroMulti(id);
                 posicionarPainelMulti(id);
-                const busca = document.getElementById(`${id}-busca`);
-                if (busca) { busca.value = ''; busca.focus({ preventScroll: true }); }
+                if (busca && (multiConfig[id]?.opcoes.length || 0) > 10) busca.focus({ preventScroll: true });
             }
         }
 
@@ -7665,28 +7333,27 @@
         }, true);
         window.addEventListener('resize', () => { const id = painelMultiAberto(); if (id) posicionarPainelMulti(id); });
 
-        // Monta o HTML de um filtro múltiplo. Usado direto no markup das seções.
+        // Monta o HTML de um filtro múltiplo: botão da faixa + popover.
+        // `comBusca` ficou por compatibilidade: a busca aparece sozinha acima de 10 opções.
         function htmlFiltroMulti(id, rotulo, rotuloTodos, comBusca = false) {
+            multiNome[id] = rotulo || rotuloTodos;
+            const nome = escapeHtml(multiNome[id]);
             return `
-                <div class="space-y-1.5 relative" data-filtro-multi="${id}">
-                    ${rotulo ? `<label class="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase">
-                        ${escapeHtml(rotulo)}
-                        <span id="${id}-marca" class="hidden w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-                    </label>` : `<span id="${id}-marca" class="hidden"></span>`}
-                    <button type="button" onclick="alternarPainelMulti('${id}')"
-                        class="w-full flex items-center justify-between gap-2 bg-[#070d1e] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 hover:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400 focus:outline-none transition shadow-inner cursor-pointer">
-                        <span id="${id}-resumo" class="truncate">${escapeHtml(rotuloTodos)}</span>
-                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-500 shrink-0"></i>
+                <div class="fx-item" data-filtro-multi="${id}">
+                    <button type="button" id="${id}-botao" class="fx-btn" onclick="alternarPainelMulti('${id}')">
+                        <span>${nome}</span><span id="${id}-marca" class="n" hidden></span>${SVG_BAIXO}
                     </button>
-                    <div id="${id}-painel" data-painel-multi style="position:fixed;z-index:9999" class="hidden bg-[#0b152b] border border-cyan-500/30 rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.7)] overflow-hidden">
-                        ${comBusca ? `<div class="p-2 border-b border-slate-800">
-                            <input type="text" id="${id}-busca" oninput="renderFiltroMulti('${id}')" placeholder="Buscar..."
-                                class="w-full bg-[#070d1e] border border-slate-700 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-100 focus:border-cyan-400 focus:outline-none">
-                        </div>` : ''}
-                        <div id="${id}-lista" class="max-h-64 overflow-y-auto py-1"></div>
-                        <div class="flex items-center justify-between gap-2 p-2 border-t border-slate-800 bg-[#070d1e]">
-                            <button type="button" onclick="limparFiltroMulti('${id}')" class="px-2 py-1 text-[10px] font-bold rounded-lg bg-slate-800/80 text-slate-300 border border-slate-700 hover:bg-slate-700/80 transition cursor-pointer">${escapeHtml(rotuloTodos)}</button>
-                            <button type="button" onclick="alternarPainelMulti('${id}')" class="px-2 py-1 text-[10px] font-bold rounded-lg bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-900/80 transition cursor-pointer">Fechar</button>
+                    <div id="${id}-painel" data-painel-multi class="pop hidden" style="position:fixed;z-index:9999">
+                        <div class="pop-topo" id="${id}-topo">
+                            <input type="search" id="${id}-busca" oninput="renderFiltroMulti('${id}')" placeholder="Buscar ${nome.toLowerCase()}…" autocomplete="off" spellcheck="false">
+                        </div>
+                        <div id="${id}-lista" class="pop-lista"></div>
+                        <div class="pop-rodape">
+                            <span id="${id}-contagem">${escapeHtml(rotuloTodos)}</span>
+                            <span class="acoes">
+                                <button type="button" id="${id}-marcar" class="mini-btn" hidden onclick="marcarAchadosMulti('${id}')"></button>
+                                <button type="button" class="mini-btn" onclick="limparFiltroMulti('${id}')">Limpar</button>
+                            </span>
                         </div>
                     </div>
                 </div>`;
@@ -7694,7 +7361,7 @@
 
         // Converte um <select> existente em filtro de múltipla escolha, SEM mexer em quem
         // preenche o select: ele continua no DOM, escondido, e o controle múltiplo espelha
-        // as opções dele. Assim cada painel manteve o seu populate* como estava.
+        // as opções dele. O nome do botão vem do <label> ao lado do select.
         function ativarMultiNoSelect(selectId, rotuloTodos, aoMudar, comBusca = false) {
             const sel = document.getElementById(selectId);
             if (!sel) return;
@@ -7702,11 +7369,12 @@
 
             if (!sel.dataset.multiAtivo) {
                 sel.classList.add('hidden');
+                const rotuloEl = sel.parentElement && sel.parentElement.querySelector(':scope > label');
+                const nome = rotuloEl ? rotuloEl.textContent.replace(/\s+/g, ' ').trim() : rotuloTodos;
                 const suporte = document.createElement('div');
-                suporte.innerHTML = htmlFiltroMulti(multiId, '', rotuloTodos, comBusca);
-                sel.parentElement.appendChild(suporte.firstElementChild);
+                suporte.innerHTML = htmlFiltroMulti(multiId, nome, rotuloTodos, comBusca);
+                sel.after(suporte.firstElementChild);
                 sel.dataset.multiAtivo = '1';
-                safeCreateIcons();
             }
 
             // "ALL" era o jeito antigo de dizer "todos"; aqui isso vira conjunto vazio.
@@ -7735,6 +7403,151 @@
             if (s.size === 0) return cfg.rotuloTodos || 'Todos';
             return cfg.opcoes.filter(o => s.has(o.valor)).map(o => o.rotulo).join(', ');
         }
+
+        // ---------------------------------------------------------------- faixa
+        // A faixa (.faixa-rh) é o contêiner dos filtros de cada tela. Ela ganha o rótulo
+        // FILTROS, o período rápido (quando a tela tem período de ponto), o "Limpar filtros"
+        // e a linha de pílulas — tudo montado aqui, para as 7 telas saírem iguais.
+        const PERIODOS_RAPIDOS = [['ultimo', 'Último mês'], ['3', '3 meses'], ['6', '6 meses'], ['ano', 'Ano'], ['tudo', 'Tudo']];
+
+        function buscasDaFaixa(faixa) {
+            return [...faixa.querySelectorAll('.busca-faixa input')];
+        }
+
+        function prepararFaixa(faixa) {
+            if (!faixa || faixa.querySelector(':scope > .fx-rot')) return;
+            const rot = document.createElement('span');
+            rot.className = 'fx-rot';
+            rot.innerHTML = SVG_FILTRO + ' Filtros';
+            faixa.prepend(rot);
+            if (faixa.dataset.periodo) {
+                const seg = document.createElement('div');
+                seg.className = 'seg';
+                seg.dataset.segPeriodo = faixa.dataset.periodo;
+                seg.title = 'Período de ponto (21 a 20)';
+                seg.innerHTML = PERIODOS_RAPIDOS.map(([k, t]) =>
+                    `<button type="button" data-k="${k}" onclick="aplicarPeriodoRapido('${faixa.dataset.periodo}', '${k}')">${t}</button>`).join('');
+                rot.after(seg);
+            }
+            const limpar = document.createElement('button');
+            limpar.type = 'button';
+            limpar.className = 'fx-limpar';
+            limpar.textContent = 'Limpar filtros';
+            limpar.hidden = true;
+            limpar.addEventListener('click', () => limparFaixa(faixa));
+            const pilulas = document.createElement('div');
+            pilulas.className = 'fx-pilulas';
+            faixa.append(limpar, pilulas);
+            buscasDaFaixa(faixa).forEach(inp => inp.addEventListener('input', () => atualizarFaixa(faixa)));
+        }
+
+        // Adiada para o fim da tarefa: os resets das telas limpam os filtros e DEPOIS a busca;
+        // atualizando na hora, o "Limpar filtros" ficava aceso por causa da busca ainda preenchida.
+        const faixasPendentes = new Set();
+        function atualizarFaixaDoFiltro(id) {
+            const casa = document.querySelector(`[data-filtro-multi="${id}"]`);
+            const faixa = casa && casa.closest('.faixa-rh');
+            if (!faixa) return;
+            if (!faixasPendentes.size) setTimeout(() => { const f = [...faixasPendentes]; faixasPendentes.clear(); f.forEach(atualizarFaixa); }, 0);
+            faixasPendentes.add(faixa);
+        }
+
+        function atualizarFaixa(faixa) {
+            prepararFaixa(faixa);
+            const partes = [];
+            faixa.querySelectorAll('[data-filtro-multi]').forEach(w => {
+                const id = w.dataset.filtroMulti;
+                const cfg = multiConfig[id], s = multiEstado[id];
+                if (!cfg || !s || !s.size) return;
+                cfg.opcoes.forEach((o, i) => {
+                    if (!s.has(o.valor)) return;
+                    partes.push(`<span class="pilula"><b>${escapeHtml(multiNome[id] || '')}</b><span title="${escapeHtml(o.rotulo)}">${escapeHtml(o.rotulo)}</span>` +
+                        `<button type="button" title="Remover" aria-label="Remover" onclick="alternarFiltroMultiIdx('${id}', ${i})">${SVG_X}</button></span>`);
+                });
+            });
+            const pil = faixa.querySelector(':scope > .fx-pilulas');
+            if (pil) pil.innerHTML = partes.join('');
+            const temBusca = buscasDaFaixa(faixa).some(i => i.value.trim());
+            const limpar = faixa.querySelector(':scope > .fx-limpar');
+            if (limpar) limpar.hidden = !(partes.length || temBusca);
+
+            const seg = faixa.querySelector(':scope > .seg[data-seg-periodo]');
+            if (seg) {
+                const id = seg.dataset.segPeriodo;
+                seg.hidden = competenciasDoMulti(id).length < 2;
+                const atual = periodoRapidoAtual(id);
+                seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.k === atual));
+            }
+        }
+
+        // Limpar da faixa: usa o reset da própria tela (que também zera atalhos e buscas);
+        // sem reset próprio, limpa os filtros da faixa e redesenha uma vez só.
+        function limparFaixa(faixa) {
+            const fn = faixa.dataset.limpar && window[faixa.dataset.limpar];
+            if (typeof fn === 'function') {
+                fn();
+            } else {
+                const ids = [...faixa.querySelectorAll('[data-filtro-multi]')].map(w => w.dataset.filtroMulti);
+                ids.forEach(id => limparFiltroMulti(id, false));
+                buscasDaFaixa(faixa).forEach(i => { i.value = ''; });
+                if (ids.length) avisarMudancaMulti(ids[0]);
+            }
+            atualizarFaixa(faixa);
+        }
+
+        // Período rápido: marca as últimas competências (o valor é AAAA-MM, já no corte do ponto).
+        function competenciasDoMulti(id) {
+            return ((multiConfig[id] || {}).opcoes || []).map(o => o.valor).filter(v => /^\d{4}-\d{2}$/.test(v)).sort().reverse();
+        }
+        function valoresPeriodoRapido(id, k) {
+            const c = competenciasDoMulti(id);
+            if (!c.length || k === 'tudo') return [];
+            if (k === 'ultimo') return c.slice(0, 1);
+            if (k === 'ano') return c.filter(v => v.startsWith(c[0].slice(0, 4)));
+            return c.slice(0, Number(k));
+        }
+        function periodoRapidoAtual(id) {
+            const s = multiEstado[id] || new Set();
+            for (const [k] of PERIODOS_RAPIDOS) {
+                const v = valoresPeriodoRapido(id, k);
+                if (v.length === s.size && v.every(x => s.has(x))) return k;
+            }
+            return null;
+        }
+        function aplicarPeriodoRapido(id, k) {
+            multiEstado[id] = new Set(valoresPeriodoRapido(id, k));
+            renderFiltroMulti(id);
+            avisarMudancaMulti(id);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => document.querySelectorAll('.faixa-rh').forEach(prepararFaixa));
+
+        // ---------------------------------------------------------------- número do cartão
+        // Número medido, não adivinhado: o valor do cartão (JetBrains Mono, mais larga) começa
+        // no tamanho do tema e encolhe até caber na largura do cartão, em vez de ser cortado
+        // ("R$ 115.240,…"). Roda quando o número muda (a contagem animada também), quando a
+        // janela muda de tamanho e quando se troca de tela.
+        const SELETOR_NUMERO_KPI = '.executive-card .text-3xl.font-extrabold, .executive-card .text-2xl.font-extrabold, .executive-card .text-xl.font-extrabold:not(#tvKpiSetorCritico):not(#headKpiDeptoCritico)';
+        function ajustarNumerosKpi() {
+            document.querySelectorAll(SELETOR_NUMERO_KPI).forEach(el => {
+                if (!el.offsetParent) return;          // tela escondida: mede quando aparecer
+                el.style.fontSize = '';
+                let t = parseFloat(getComputedStyle(el).fontSize);
+                while (el.scrollWidth > el.clientWidth + 1 && t > 13) {
+                    t -= 1;
+                    el.style.fontSize = t + 'px';
+                }
+            });
+        }
+        let ajusteKpiPendente = null;
+        function agendarAjusteKpi() {
+            if (ajusteKpiPendente) return;
+            ajusteKpiPendente = setTimeout(() => { ajusteKpiPendente = null; ajustarNumerosKpi(); }, 80);
+        }
+        new MutationObserver(muts => {
+            if (muts.some(m => { const el = m.target.nodeType === 3 ? m.target.parentElement : m.target; return el && el.matches && el.matches(SELETOR_NUMERO_KPI); })) agendarAjusteKpi();
+        }).observe(document.documentElement, { subtree: true, childList: true, characterData: true });
+        window.addEventListener('resize', agendarAjusteKpi);
 
         // ================================================================
         // CADASTRO DE EMPREGADOS — importação, status e demissão
@@ -9141,7 +8954,7 @@
             document.getElementById('ijKpiColaboradoresRisco').textContent = colaboradoresRisco.toLocaleString('pt-BR');
             document.getElementById('ijKpiPiorIntervalo').textContent = pior ? formatGapLabel(pior.descansoMinutos) : '—';
             document.getElementById('ijKpiPiorIntervaloDetalhe').textContent = pior ? `${pior.colaborador_nome} • saída ${formatDateBR(pior.data_iso)}` : 'Menor descanso entre jornadas';
-            document.getElementById('ijKpiHorasExtras').textContent = `${totalHE.toFixed(1)}h`;
+            document.getElementById('ijKpiHorasExtras').textContent = `${fmtNumBR(totalHE, 1)}h`;
             document.getElementById('ijKpiColaboradores').textContent = colaboradoresAnalisados.toLocaleString('pt-BR');
             document.getElementById('ijKpiConformidade').textContent = `${conformidade.toFixed(1)}%`;
         }
@@ -9338,7 +9151,7 @@
                         <td class="py-2 pr-4 text-right text-slate-300">${c.dias.size}</td>
                         <td class="py-2 pr-4 text-right">${violBadge}</td>
                         <td class="py-2 pr-4 text-right ${piorClasse}">${formatGapLabel(c.piorMin)}</td>
-                        <td class="py-2 pr-4 text-right text-cyan-300 font-bold">${c.horas.toFixed(1)}h</td>
+                        <td class="py-2 pr-4 text-right text-cyan-300 font-bold">${fmtNumBR(c.horas, 1)}h</td>
                         <td class="py-2 pr-4 text-center">
                             <button onclick="openInterjornadaFicha('${String(c.nome).replace(/'/g, "\\'")}')" class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-lube-navy dark:bg-slate-800 text-white hover:bg-lube-red transition shadow-sm" title="Ver ficha de ponto e interjornada do colaborador">
                                 <i data-lucide="user" class="w-3 h-3"></i> Ver Ficha
@@ -9385,7 +9198,7 @@
             document.getElementById('ijFichaDias').textContent = registros.length;
             document.getElementById('ijFichaViolacoes').textContent = violacoes.length;
             document.getElementById('ijFichaPiorIntervalo').textContent = pior ? formatGapLabel(pior.descansoMinutos) : '—';
-            document.getElementById('ijFichaHorasExtras').textContent = `${totalHE.toFixed(1)}h`;
+            document.getElementById('ijFichaHorasExtras').textContent = `${fmtNumBR(totalHE, 1)}h`;
 
             const tbody = document.getElementById('ijFichaTableBody');
             tbody.innerHTML = registros.map(r => {
