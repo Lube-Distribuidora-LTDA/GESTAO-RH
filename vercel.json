@@ -13,6 +13,7 @@
     }
   },
   "routes": [
+    { "src": "/(.*)", "headers": { "Content-Security-Policy": "frame-ancestors 'self' https://painel-lube-distribuidora.vercel.app" }, "continue": true },
     { "handle": "filesystem" },
     {
       "src": "/(.*)",
