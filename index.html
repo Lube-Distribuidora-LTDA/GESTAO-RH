@@ -1255,7 +1255,7 @@
             </div>
 
             <!-- Filters -->
-            <div id="ijFiltrosGrid" class="faixa-rh faixa-separada" data-limpar="resetInterjornadaFilters" data-periodo="ijMultiPeriodo">
+            <div id="ijFiltrosGrid" class="faixa-rh faixa-separada" data-limpar="resetInterjornadaFilters">
                 <!-- Preenchido por renderFiltrosInterjornada(): todos são de múltipla escolha -->
             </div>
         </div>
@@ -8867,14 +8867,16 @@
             applyInterjornadaFilters();
         }
 
-        // Monta os cinco filtros da aba, todos de múltipla escolha. O de colaborador
-        // e o de período são os que o RH mais combina — várias pessoas, vários meses.
+        // Monta os filtros da aba, todos de múltipla escolha. Período em dois: Ano e Mês
+        // (desde a carga de 2024–2025 a base tem três anos). Combinados dão qualquer recorte:
+        // um ano inteiro, o mesmo mês em anos diferentes, vários meses de vários anos.
         function renderFiltrosInterjornada() {
             const grid = document.getElementById('ijFiltrosGrid');
             if (!grid || grid.dataset.montado) return;
             grid.innerHTML =
                 `<div class="lg:col-span-2">${htmlFiltroMulti('ijMultiColaborador', 'Colaborador', 'Todos os Colaboradores', true)}</div>` +
-                htmlFiltroMulti('ijMultiPeriodo', 'Período (Ponto)', 'Todos os Períodos', true) +
+                htmlFiltroMulti('ijMultiAno', 'Ano', 'Todos os Anos') +
+                htmlFiltroMulti('ijMultiMes', 'Mês', 'Todos os Meses') +
                 htmlFiltroMulti('ijMultiEmpresa', 'Empresa', 'Todas as Empresas') +
                 htmlFiltroMulti('ijMultiFuncao', 'Função', 'Todas as Funções') +
                 htmlFiltroMulti('ijMultiSituacao', 'Situação', 'Todas as Situações');
@@ -8886,10 +8888,17 @@
             renderFiltrosInterjornada();
             const linhas = interjornadaAnalysisRows || [];
 
-            const competencias = [...new Set(linhas.map(r => r.competencia))].sort().reverse();
-            registrarFiltroMulti('ijMultiPeriodo',
-                competencias.map(c => ({ valor: c, rotulo: formatCompetenciaLabelLongo(c, interjornadaDiaCorte) })),
-                'Todos os Períodos', applyInterjornadaFilters);
+            // Competência AAAA-MM no corte do ponto: o ano e o mês são os do FECHAMENTO
+            // (21/12/2024 a 20/01/2025 = Janeiro de 2025).
+            const competencias = [...new Set(linhas.map(r => r.competencia).filter(Boolean))];
+            const anos = [...new Set(competencias.map(c => c.slice(0, 4)))].sort().reverse();
+            registrarFiltroMulti('ijMultiAno',
+                anos.map(a => ({ valor: a, rotulo: a })),
+                'Todos os Anos', applyInterjornadaFilters);
+            const meses = [...new Set(competencias.map(c => c.slice(5, 7)))].sort();
+            registrarFiltroMulti('ijMultiMes',
+                meses.map(m => ({ valor: m, rotulo: formatCompetenciaLabelLongo(`2001-${m}`, interjornadaDiaCorte).replace('/2001', '') })),
+                'Todos os Meses', applyInterjornadaFilters);
 
             const nomes = [...new Set(linhas.map(r => r.colaborador_nome).filter(Boolean))].sort();
             registrarFiltroMulti('ijMultiColaborador',
@@ -8916,10 +8925,15 @@
             ], 'Todas as Situações', applyInterjornadaFilters);
         }
 
+        function competenciaNoFiltroIj(competencia) {
+            const c = String(competencia || '');
+            return multiAceita('ijMultiAno', c.slice(0, 4)) && multiAceita('ijMultiMes', c.slice(5, 7));
+        }
+
         function applyInterjornadaFilters() {
             // Cada filtro vazio significa "todos", então nenhum deles começa escondendo dado.
             interjornadaFilteredRows = (interjornadaAnalysisRows || []).filter(r => {
-                if (!multiAceita('ijMultiPeriodo', r.competencia)) return false;
+                if (!competenciaNoFiltroIj(r.competencia)) return false;
                 if (!multiAceita('ijMultiColaborador', r.colaborador_nome)) return false;
                 if (!multiAceita('ijMultiEmpresa', empresaDoColaborador(r.colaborador_nome))) return false;
                 if (!multiAceita('ijMultiFuncao', r.funcao ? normalizeFuncao(r.funcao) : '__SEM_FUNCAO__')) return false;
@@ -8934,7 +8948,7 @@
         }
 
         function resetInterjornadaFilters() {
-            ['ijMultiPeriodo', 'ijMultiColaborador', 'ijMultiEmpresa', 'ijMultiFuncao', 'ijMultiSituacao']
+            ['ijMultiAno', 'ijMultiMes', 'ijMultiColaborador', 'ijMultiEmpresa', 'ijMultiFuncao', 'ijMultiSituacao']
                 .forEach(id => limparFiltroMulti(id, false));
             applyInterjornadaFilters();
         }
@@ -9169,9 +9183,9 @@
         function openInterjornadaFicha(nome) {
             // Respeita os períodos selecionados no filtro — a ficha mostra só os dias
             // daqueles períodos de apuração, não o histórico completo do colaborador.
-            const periodosSel = multiSelecionados('ijMultiPeriodo');
-            let registros = interjornadaAnalysisRows.filter(r => r.colaborador_nome === nome);
-            if (periodosSel.length > 0) registros = registros.filter(r => periodosSel.includes(r.competencia));
+            let registros = interjornadaAnalysisRows.filter(r => r.colaborador_nome === nome && competenciaNoFiltroIj(r.competencia));
+            const periodosSel = (multiEstaFiltrado('ijMultiAno') || multiEstaFiltrado('ijMultiMes'))
+                ? [...new Set(registros.map(r => r.competencia))].sort() : [];
             registros = registros.sort((a, b) => a.data_iso.localeCompare(b.data_iso));
             if (registros.length === 0) return;
 
@@ -9407,7 +9421,7 @@
 
                 detalhe.mergeCells('A2:J2');
                 const f1 = detalhe.getCell('A2');
-                f1.value = `Períodos: ${descreverFiltroMulti('ijMultiPeriodo')}  •  Colaboradores: ${descreverFiltroMulti('ijMultiColaborador')}`;
+                f1.value = `Ano: ${descreverFiltroMulti('ijMultiAno')}  •  Mês: ${descreverFiltroMulti('ijMultiMes')}  •  Colaboradores: ${descreverFiltroMulti('ijMultiColaborador')}`;
                 f1.font = { size: 9, italic: true, color: { argb: 'FF444444' } };
 
                 detalhe.mergeCells('A3:J3');
