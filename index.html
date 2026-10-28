@@ -2836,6 +2836,158 @@
             await initSupabaseIntegration();
         });
 
+        // ================================================================
+        // PRÉ-CARGA DAS ABAS E CÓPIA NO NAVEGADOR
+        // ================================================================
+        // Antes cada aba só ia ao banco no clique — a InterJornadas, com 62 mil linhas,
+        // levava ~5 s para aparecer. Agora:
+        //  1. ao conectar, as buscas de TODAS as abas saem juntas, em paralelo;
+        //  2. cada busca devolve na hora a cópia da última visita, guardada no navegador
+        //     (IndexedDB), e confere o banco por trás; se o banco mudou, a aba se refaz sozinha;
+        //  3. depois do Absenteísmo, as outras abas são montadas em segundo plano, então o
+        //     clique na aba só mostra o que já está pronto.
+        // Padrão da casa: o que se mostra tem que abrir na hora; o lento fica por trás.
+        const PRE_CARGA = {
+            turnover:      { buscar: () => window.SupabaseService.fetchTurnoverMensal(),     secoes: ['turnover'] },
+            colaboradores: { buscar: () => window.SupabaseService.fetchColaboradores(),      secoes: ['empregados'] },
+            headMetas:     { buscar: () => window.SupabaseService.fetchHeadNecessidade(),    secoes: ['head'] },
+            headCadastro:  { buscar: () => window.SupabaseService.fetchColaboradores(),      secoes: ['head'] },
+            horaExtra:     { buscar: () => window.SupabaseService.fetchPagamentoHoraExtra(), secoes: ['horaextra'] },
+            interjornada:  { buscar: () => window.SupabaseService.fetchInterjornadaRegistros(), secoes: ['interjornada'] }
+        };
+        const preCargas = {};   // chave -> Promise da primeira entrega (usada uma vez)
+        const frescos = {};     // chave -> dado novo do banco que chegou depois da cópia
+
+        let bancoLocalPromessa = null;
+        function bancoLocal() {
+            if (!bancoLocalPromessa) bancoLocalPromessa = new Promise(resolve => {
+                try {
+                    const req = indexedDB.open('gestao-rh', 1);
+                    req.onupgradeneeded = () => req.result.createObjectStore('copias');
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => resolve(null);
+                    req.onblocked = () => resolve(null);
+                } catch (e) { resolve(null); }
+            });
+            return bancoLocalPromessa;
+        }
+        async function lerCopiaLocal(chave) {
+            const db = await bancoLocal();
+            if (!db) return null;
+            return new Promise(resolve => {
+                try {
+                    const g = db.transaction('copias').objectStore('copias').get(chave);
+                    g.onsuccess = () => resolve(g.result || null);
+                    g.onerror = () => resolve(null);
+                } catch (e) { resolve(null); }
+            });
+        }
+        async function gravarCopiaLocal(chave, dados) {
+            if (!Array.isArray(dados)) return;
+            const db = await bancoLocal();
+            if (!db) return;
+            try { db.transaction('copias', 'readwrite').objectStore('copias').put({ quando: Date.now(), dados }, chave); } catch (e) {}
+        }
+
+        // Assinatura barata para saber se o banco mudou: quantidade, soma dos ids e a última
+        // alteração; sem coluna de alteração, compara o conteúdo inteiro (tabelas pequenas).
+        function assinaturaDados(d) {
+            if (!Array.isArray(d)) return String(d);
+            if (d.length && (d[0].updated_at !== undefined || d[0].created_at !== undefined)) {
+                let ids = 0, ultima = '';
+                for (const r of d) {
+                    ids += Number(r.id) || 0;
+                    const q = r.updated_at || r.created_at || '';
+                    if (q > ultima) ultima = q;
+                }
+                return `${d.length}|${ids}|${ultima}`;
+            }
+            return JSON.stringify(d);
+        }
+
+        function iniciarPreCarga(chave) {
+            const cfg = PRE_CARGA[chave];
+            if (!cfg || preCargas[chave]) return;
+            preCargas[chave] = (async () => {
+                const copia = await lerCopiaLocal(chave);
+                const fresco = cfg.buscar().then(d => { gravarCopiaLocal(chave, d); return d; });
+                if (copia && Array.isArray(copia.dados)) {
+                    // Abre com a cópia; quando o banco responder, refaz a aba se algo mudou.
+                    fresco.then(d => {
+                        if (assinaturaDados(d) !== assinaturaDados(copia.dados)) dadoNovoChegou(chave, d);
+                    }).catch(err => console.warn(`[pré-carga] ${chave}: banco não respondeu, segue a cópia`, err));
+                    return copia.dados;
+                }
+                return fresco;
+            })();
+            preCargas[chave].catch(() => {});
+        }
+
+        function iniciarPreCargaGeral() {
+            Object.keys(PRE_CARGA).forEach(iniciarPreCarga);
+        }
+
+        // Entrega os dados de uma aba: o que chegou novo do banco, senão a pré-carga, senão
+        // busca agora. A pré-carga é usada uma vez só: depois de uma importação a aba busca
+        // de novo, e não a foto de quando o sistema abriu.
+        async function dadosDe(chave) {
+            if (frescos[chave]) { const d = frescos[chave]; delete frescos[chave]; return d; }
+            const p = preCargas[chave];
+            if (p) {
+                delete preCargas[chave];
+                try { return await p; } catch (e) { /* cai na busca direta */ }
+            }
+            const d = await PRE_CARGA[chave].buscar();
+            gravarCopiaLocal(chave, d);
+            return d;
+        }
+
+        const RECARREGAR_SECAO = {
+            turnover: () => { turnoverDataLoaded = false; },
+            empregados: () => { colaboradoresDataLoaded = false; },
+            head: () => { headDataLoaded = false; },
+            horaextra: () => { horaExtraDataLoaded = false; },
+            interjornada: () => { interjornadaDataLoaded = false; },
+            exames: () => { examesDataLoaded = false; }
+        };
+        function dadoNovoChegou(chave, dados) {
+            frescos[chave] = dados;
+            (PRE_CARGA[chave].secoes || []).forEach(secao => {
+                RECARREGAR_SECAO[secao]();
+                carregarSecao(secao);
+            });
+        }
+
+        const LOADER_SECAO = {
+            turnover: () => loadTurnoverSection(),
+            empregados: () => loadEmpregadosSection(),
+            head: () => loadHeadSection(),
+            horaextra: () => loadHoraExtraSection(),
+            interjornada: () => loadInterjornadaSection(),
+            exames: () => loadExamesSection()
+        };
+        const carregandoSecao = {};
+        // Uma carga por aba de cada vez: se o clique chega enquanto a aba está sendo montada
+        // em segundo plano, ele espera essa montagem em vez de buscar tudo de novo.
+        function carregarSecao(nome) {
+            const fn = LOADER_SECAO[nome];
+            if (!fn) return Promise.resolve();
+            if (carregandoSecao[nome]) return carregandoSecao[nome];
+            const p = Promise.resolve().then(fn).catch(err => console.error(`[aba ${nome}]`, err))
+                .finally(() => { delete carregandoSecao[nome]; });
+            carregandoSecao[nome] = p;
+            return p;
+        }
+
+        // Depois do Absenteísmo, monta as outras abas uma a uma, dando fôlego à tela entre elas.
+        async function montarTelasEmSegundoPlano() {
+            for (const nome of ['interjornada', 'horaextra', 'empregados', 'head', 'turnover', 'exames']) {
+                if (nome === currentActiveSection) continue;
+                await carregarSecao(nome);
+                await new Promise(r => setTimeout(r, 50));
+            }
+        }
+
         // Supabase Live Synchronization
         async function initSupabaseIntegration() {
             if (!window.SupabaseService) {
@@ -2850,6 +3002,7 @@
 
                 if (testRes.connected) {
                     isSupabaseOnline = true;
+                    iniciarPreCargaGeral();
                     supabaseLatency = testRes.latencyMs;
                     supabaseRecordCount = testRes.totalRegistros;
                     isViewingHistoricalImport = false;
@@ -2889,6 +3042,7 @@
                     }
 
                     updateSupabaseStatusUI(true, rawData.length, testRes.latencyMs);
+                    montarTelasEmSegundoPlano();
 
                     // Subscribe to Realtime WebSocket Events
                     window.SupabaseService.subscribeRealtime(
@@ -5184,12 +5338,7 @@
             const absActions = document.getElementById('absenteismoHeaderActions');
             if (absActions) absActions.classList.toggle('hidden', name !== 'absenteismo');
 
-            if (name === 'turnover') loadTurnoverSection();
-            if (name === 'empregados') loadEmpregadosSection();
-            if (name === 'head') loadHeadSection();
-            if (name === 'horaextra') loadHoraExtraSection();
-            if (name === 'interjornada') loadInterjornadaSection();
-            if (name === 'exames') loadExamesSection();
+            carregarSecao(name);
 
             closeSidebarMobile();
             safeCreateIcons();
@@ -5211,7 +5360,7 @@
 
             try {
                 if (window.SupabaseService && isSupabaseOnline) {
-                    turnoverRawData = await window.SupabaseService.fetchTurnoverMensal();
+                    turnoverRawData = await dadosDe('turnover');
                 } else {
                     turnoverRawData = [];
                 }
@@ -5703,7 +5852,7 @@
 
             try {
                 if (window.SupabaseService && isSupabaseOnline) {
-                    colaboradoresRawData = normalizeAllFuncoes(await window.SupabaseService.fetchColaboradores());
+                    colaboradoresRawData = normalizeAllFuncoes(await dadosDe('colaboradores'));
                 } else {
                     colaboradoresRawData = [];
                 }
@@ -6019,8 +6168,8 @@
 
             try {
                 if (window.SupabaseService && isSupabaseOnline) {
-                    const metas = consolidateHeadRecords(await window.SupabaseService.fetchHeadNecessidade());
-                    const cadastro = await window.SupabaseService.fetchColaboradores();
+                    const [metasBrutas, cadastro] = await Promise.all([dadosDe('headMetas'), dadosDe('headCadastro')]);
+                    const metas = consolidateHeadRecords(metasBrutas);
                     headRawData = montarHeadPeloCadastro(metas, cadastro);
                 } else {
                     headRawData = [];
@@ -6535,7 +6684,7 @@
 
             try {
                 if (window.SupabaseService && isSupabaseOnline) {
-                    horaExtraRawData = normalizeAllFuncoes(await window.SupabaseService.fetchPagamentoHoraExtra());
+                    horaExtraRawData = normalizeAllFuncoes(await dadosDe('horaExtra'));
                 } else {
                     horaExtraRawData = [];
                 }
@@ -8811,8 +8960,9 @@
                 // próxima entrada inflam o "descanso" calculado — guardamos quantos e quais
                 // para não confundir um período com folga no meio com um erro de cálculo.
                 diasEnriquecidos.forEach((row, idx) => {
-                    const entradaMin = parseInterjornadaTimeToMinutes(row.entrada1) ?? parseInterjornadaTimeToMinutes(row.entrada2);
-                    const saidaMin = parseInterjornadaTimeToMinutes(row.saida2) ?? parseInterjornadaTimeToMinutes(row.saida1);
+                    const entradaMin = parseInterjornadaTimeToMinutes(row.entrada1) ?? parseInterjornadaTimeToMinutes(row.entrada2) ?? parseInterjornadaTimeToMinutes(row.entrada3);
+                    // Última saída do dia: a 3ª quando houve seis batidas.
+                    const saidaMin = parseInterjornadaTimeToMinutes(row.saida3) ?? parseInterjornadaTimeToMinutes(row.saida2) ?? parseInterjornadaTimeToMinutes(row.saida1);
 
                     if (entradaMin !== null && lastExit) {
                         const gapMin = (isoToEpochDays(row.data_iso) * 1440 + entradaMin) - (isoToEpochDays(lastExit.data_iso) * 1440 + lastExit.minutos);
@@ -8851,7 +9001,7 @@
             try {
                 await ensureInterjornadaFuncaoMap();
                 if (window.SupabaseService && isSupabaseOnline) {
-                    interjornadaRawRows = await window.SupabaseService.fetchInterjornadaRegistros();
+                    interjornadaRawRows = await dadosDe('interjornada');
                 } else {
                     interjornadaRawRows = [];
                 }
@@ -8982,9 +9132,17 @@
             const subtituloMensal = document.getElementById('ijEvolucaoMensalSubtitulo');
             if (subtituloMensal) subtituloMensal.textContent = `Violações de interjornada e horas extras por período de ponto (dia ${interjornadaDiaCorte} do mês anterior ao dia ${interjornadaDiaCorte - 1} do mês de competência)`;
 
-            const competenciasOrdenadas = [...new Set(rows.map(r => r.competencia))].sort();
-            const violacoesPorCompetencia = competenciasOrdenadas.map(c => rows.filter(r => r.competencia === c && r.violacao).length);
-            const hePorCompetencia = competenciasOrdenadas.map(c => +rows.filter(r => r.competencia === c).reduce((s, r) => s + Number(r.heHoras || 0), 0).toFixed(1));
+            // Uma passada só pelas linhas (antes: uma varredura completa por período).
+            const porCompetencia = new Map();
+            rows.forEach(r => {
+                const a = porCompetencia.get(r.competencia) || { viol: 0, he: 0 };
+                if (r.violacao) a.viol++;
+                a.he += Number(r.heHoras || 0);
+                porCompetencia.set(r.competencia, a);
+            });
+            const competenciasOrdenadas = [...porCompetencia.keys()].sort();
+            const violacoesPorCompetencia = competenciasOrdenadas.map(c => porCompetencia.get(c).viol);
+            const hePorCompetencia = competenciasOrdenadas.map(c => +porCompetencia.get(c).he.toFixed(1));
 
             const evoMensalCanvas = document.getElementById('chartInterjornadaEvolucaoMensal');
             if (evoMensalCanvas) {
@@ -9023,9 +9181,12 @@
             }
 
             // 1. Evolução das violações por dia (data do registro de saída analisado)
+            // Uma passada só (antes: ~900 dias × ~50 mil linhas = 45 milhões de comparações).
             const comDescanso = rows.filter(r => r.descansoMinutos !== null);
-            const datas = [...new Set(comDescanso.map(r => r.data_iso))].sort();
-            const violacoesPorDia = datas.map(d => comDescanso.filter(r => r.data_iso === d && r.violacao).length);
+            const porDia = new Map();
+            comDescanso.forEach(r => porDia.set(r.data_iso, (porDia.get(r.data_iso) || 0) + (r.violacao ? 1 : 0)));
+            const datas = [...porDia.keys()].sort();
+            const violacoesPorDia = datas.map(d => porDia.get(d));
 
             const evoCanvas = document.getElementById('chartInterjornadaEvolucao');
             if (evoCanvas) {
@@ -9227,7 +9388,7 @@
                         <td class="p-2.5 text-slate-300">${escapeHtml(r.entrada1 || '—')}</td>
                         <td class="p-2.5 text-slate-300">${escapeHtml(r.saida1 || '—')}</td>
                         <td class="p-2.5 text-slate-300">${escapeHtml(r.entrada2 || '—')}</td>
-                        <td class="p-2.5 text-slate-300">${escapeHtml(r.saida2 || '—')}</td>
+                        <td class="p-2.5 text-slate-300">${escapeHtml(r.saida2 || '—')}${(r.entrada3 || r.saida3) ? `<span class="block text-[10px] text-slate-500">3ª: ${escapeHtml(r.entrada3 || '—')} – ${escapeHtml(r.saida3 || '—')}</span>` : ''}</td>
                         <td class="p-2.5 text-right text-cyan-300">${r.heHoras > 0 ? r.heHoras.toFixed(1) + 'h' : '—'}</td>
                         <td class="p-2.5 text-right ${r.violacao ? 'text-red-400 font-bold' : 'text-slate-300'}">
                             ${formatGapLabel(r.descansoMinutos)}
@@ -9269,12 +9430,55 @@
         // Faz o parse do relatório de ponto (formato PontoMais): um bloco por colaborador,
         // com uma linha "Colaborador" + cabeçalho de colunas + uma linha por dia do período,
         // encerrando com uma linha "TOTAIS" antes do próximo colaborador.
+        // Colunas do Relatório de Jornada pelo nome do cabeçalho. Coluna que não está aqui
+        // recusa a planilha: melhor um aviso do que gravar hora no lugar errado.
+        const COLUNAS_JORNADA = {
+            'data': 'data',
+            '1aentrada': 'entrada1', '1asaida': 'saida1',
+            '2aentrada': 'entrada2', '2asaida': 'saida2',
+            '3aentrada': 'entrada3', '3asaida': 'saida3',
+            'credito': 'credito', 'debito': 'debito',
+            'hintervalo': 'horas_intervalo', 'horasnormais': 'horas_normais',
+            'horasextrasfator150': 'he_50', 'horasextrasfator2100': 'he_100',
+            'adicionalnoturno': 'adicional_noturno', 'saldo': 'saldo', 'motivoobservacao': 'motivo_observacao',
+            // Aparece só em alguns blocos (muda de posição de pessoa para pessoa); a tabela não guarda.
+            'hfaltantes': '_ignorar'
+        };
+        function mapearColunasJornada(linhaCabecalho) {
+            const mapa = {};
+            const desconhecidas = [];
+            linhaCabecalho.forEach((titulo, idx) => {
+                const bruto = String(titulo || '').trim();
+                if (!bruto) return;
+                const chave = bruto.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (COLUNAS_JORNADA[chave]) mapa[COLUNAS_JORNADA[chave]] = idx;
+                else desconhecidas.push(bruto);
+            });
+            const faltando = ['entrada1', 'saida1', 'he_50', 'he_100'].filter(k => mapa[k] === undefined);
+            if (desconhecidas.length || faltando.length) {
+                throw new Error('O cabeçalho do Relatório de Jornada mudou e a planilha não foi importada.' +
+                    (desconhecidas.length ? ` Colunas desconhecidas: ${desconhecidas.join(', ')}.` : '') +
+                    (faltando.length ? ` Colunas que faltam: ${faltando.join(', ')}.` : ''));
+            }
+            return mapa;
+        }
+
+        // Equipe pelo nome do arquivo: "..._equipe LLOG.xlsx" ou "Pontomais_-_Jornada_<de>_-_<até>_-_LUBE RJ.xlsx".
+        // O sufixo que o PontoMais gera sozinho (um código longo) não é equipe: fica LLOG, como antes.
+        function equipeDoArquivoPontoMais(nomeArquivo) {
+            const n = String(nomeArquivo || '');
+            const porEquipe = n.match(/equipe\s+([A-Za-z0-9\-]+)/i);
+            if (porEquipe) return porEquipe[1].toUpperCase();
+            const sufixo = n.match(/\d{2}\.\d{2}\.\d{4}_-_\d{2}\.\d{2}\.\d{4}_-_([A-Za-z][A-Za-z ]*[A-Za-z])(?![A-Za-z0-9])/);
+            if (sufixo && !/^[a-f]+$/i.test(sufixo[1])) return sufixo[1].trim().toUpperCase();
+            return 'LLOG';
+        }
+
         function handleInterjornadaExcelImport(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            const equipeMatch = file.name.match(/equipe\s+([A-Za-z0-9\-]+)/i);
-            const equipe = equipeMatch ? equipeMatch[1].toUpperCase() : 'LLOG';
+            const equipe = equipeDoArquivoPontoMais(file.name);
 
             const reader = new FileReader();
             reader.onload = async function(e) {
@@ -9294,13 +9498,21 @@
 
                     const diasSemanaPt = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
                     const parsedRows = [];
+                    let colunas = null;
                     let i = 0;
                     while (i < rows.length) {
                         const col0 = String(rows[i][0] || '').trim();
                         if (col0 === 'Colaborador') {
                             const nome = normalizeNomeColaborador(rows[i][1]);
                             i++;
-                            if (rows[i] && String(rows[i][0] || '').trim() === 'Data') i++;
+                            // As colunas são lidas pelo NOME do cabeçalho, nunca pela posição: quando
+                            // alguém bate o ponto seis vezes, o PontoMais acrescenta "3ª Entrada/Saída"
+                            // e tudo à direita anda duas casas (a hora extra virava o intervalo).
+                            if (rows[i] && String(rows[i][0] || '').trim() === 'Data') {
+                                colunas = mapearColunasJornada(rows[i]);
+                                i++;
+                            }
+                            if (!colunas) throw new Error('Cabeçalho do Relatório de Jornada não encontrado (linha "Data | 1ª Entrada | ...").');
 
                             while (i < rows.length) {
                                 const dayRow = rows[i];
@@ -9311,6 +9523,7 @@
                                 const dataDate = parseExcelDate(dayCol0);
                                 if (dataDate && nome) {
                                     const iso = `${dataDate.getFullYear()}-${String(dataDate.getMonth() + 1).padStart(2, '0')}-${String(dataDate.getDate()).padStart(2, '0')}`;
+                                    const c = (chave) => colunas[chave] === undefined ? '' : String(dayRow[colunas[chave]] || '').trim();
                                     parsedRows.push({
                                         colaborador_nome: nome,
                                         equipe,
@@ -9318,19 +9531,21 @@
                                         data_formatada: `${String(dataDate.getDate()).padStart(2, '0')}/${String(dataDate.getMonth() + 1).padStart(2, '0')}/${dataDate.getFullYear()}`,
                                         dia_semana: diasSemanaPt[dataDate.getDay()],
                                         ano_mes_sort: `${dataDate.getFullYear()}-${String(dataDate.getMonth() + 1).padStart(2, '0')}`,
-                                        entrada1: String(dayRow[1] || '').trim(),
-                                        saida1: String(dayRow[2] || '').trim(),
-                                        entrada2: String(dayRow[3] || '').trim(),
-                                        saida2: String(dayRow[4] || '').trim(),
-                                        credito: String(dayRow[5] || '').trim(),
-                                        debito: String(dayRow[6] || '').trim(),
-                                        horas_intervalo: String(dayRow[7] || '').trim(),
-                                        horas_normais: String(dayRow[8] || '').trim(),
-                                        he_50_horas: parseInterjornadaDurationHoras(dayRow[9]),
-                                        he_100_horas: parseInterjornadaDurationHoras(dayRow[10]),
-                                        adicional_noturno: String(dayRow[11] || '').trim(),
-                                        saldo: String(dayRow[12] || '').trim(),
-                                        motivo_observacao: String(dayRow[13] || '').trim(),
+                                        entrada1: c('entrada1'),
+                                        saida1: c('saida1'),
+                                        entrada2: c('entrada2'),
+                                        saida2: c('saida2'),
+                                        entrada3: c('entrada3'),
+                                        saida3: c('saida3'),
+                                        credito: c('credito'),
+                                        debito: c('debito'),
+                                        horas_intervalo: c('horas_intervalo'),
+                                        horas_normais: c('horas_normais'),
+                                        he_50_horas: parseInterjornadaDurationHoras(c('he_50')),
+                                        he_100_horas: parseInterjornadaDurationHoras(c('he_100')),
+                                        adicional_noturno: c('adicional_noturno'),
+                                        saldo: c('saldo'),
+                                        motivo_observacao: c('motivo_observacao'),
                                         origem: 'IMPORTACAO'
                                     });
                                 }
@@ -9447,7 +9662,7 @@
                             formatDateBR(r.data_iso),
                             r.dia_semana || '',
                             r.entrada1 || r.entrada2 || '',
-                            r.saida2 || r.saida1 || '',
+                            r.saida3 || r.saida2 || r.saida1 || '',
                             Number(r.heHoras || 0),
                             r.descansoMinutos === null ? '' : formatGapLabel(r.descansoMinutos),
                             r.descansoMinutos === null ? 'Sem par de jornada' : (r.violacao ? 'VIOLAÇÃO' : 'OK')
